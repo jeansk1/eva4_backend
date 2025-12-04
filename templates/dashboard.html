@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block title %}Inicio - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-end mb-5">
+    <div>
+        <h6 class="text-uppercase text-muted small fw-bold ls-1">Panel de Control</h6>
+        <h1 class="fw-bold text-dark display-5">Hola, <span id="welcome-name" class="text-primary">Usuario</span> 👋</h1>
+        <p class="text-muted mb-0">Bienvenido al sistema de gestión integral.</p>
+    </div>
+    <div class="text-end d-none d-md-block">
+        <p class="mb-0 fw-bold text-dark" id="current-date">Cargando fecha...</p>
+        <span class="badge bg-light text-secondary border" id="user-role-badge">Rol</span>
+    </div>
+</div>
+
+<div class="row g-4">
+    
+    <div class="col-md-6 col-lg-3" id="card-ventas">
+        <a href="/ventas/" class="card h-100 border-0 shadow-hover text-decoration-none module-card">
+            <div class="card-body p-4">
+                <div class="icon-shape bg-success-subtle text-success rounded-3 mb-3">
+                    <i class="bi bi-cart-check-fill fs-3"></i>
+                </div>
+                <h5 class="fw-bold text-dark">Punto de Venta</h5>
+                <p class="text-muted small mb-0">Realizar ventas, emitir tickets y gestionar caja diaria.</p>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0 pb-4">
+                <span class="text-success fw-bold small">Ir al POS <i class="bi bi-arrow-right ms-1"></i></span>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-6 col-lg-3" id="card-productos">
+        <a href="/productos/" class="card h-100 border-0 shadow-hover text-decoration-none module-card">
+            <div class="card-body p-4">
+                <div class="icon-shape bg-primary-subtle text-primary rounded-3 mb-3">
+                    <i class="bi bi-box-seam-fill fs-3"></i>
+                </div>
+                <h5 class="fw-bold text-dark">Productos</h5>
+                <p class="text-muted small mb-0">Gestión de catálogo, precios, costos y categorías.</p>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0 pb-4">
+                <span class="text-primary fw-bold small">Ver Catálogo <i class="bi bi-arrow-right ms-1"></i></span>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-6 col-lg-3" id="card-inventario">
+        <a href="/inventario/" class="card h-100 border-0 shadow-hover text-decoration-none module-card">
+            <div class="card-body p-4">
+                <div class="icon-shape bg-warning-subtle text-warning rounded-3 mb-3">
+                    <i class="bi bi-boxes fs-3"></i>
+                </div>
+                <h5 class="fw-bold text-dark">Inventario</h5>
+                <p class="text-muted small mb-0">Control de stock, ingresos de mercadería y ajustes.</p>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0 pb-4">
+                <span class="text-warning fw-bold small">Gestionar Stock <i class="bi bi-arrow-right ms-1"></i></span>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-6 col-lg-3" id="card-reportes">
+        <a href="/reportes/" class="card h-100 border-0 shadow-hover text-decoration-none module-card">
+            <div class="card-body p-4">
+                <div class="icon-shape bg-info-subtle text-info rounded-3 mb-3">
+                    <i class="bi bi-graph-up-arrow fs-3"></i>
+                </div>
+                <h5 class="fw-bold text-dark">Reportes</h5>
+                <p class="text-muted small mb-0">KPIs, gráficos de rendimiento y exportación de datos.</p>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0 pb-4">
+                <span class="text-info fw-bold small">Ver Estadísticas <i class="bi bi-arrow-right ms-1"></i></span>
+            </div>
+        </a>
+    </div>
+
+</div>
+
+<div class="row mt-5" id="admin-section" style="display: none;">
+    <div class="col-12 mb-3">
+        <h6 class="text-uppercase text-muted small fw-bold border-bottom pb-2">Administración</h6>
+    </div>
+    <div class="col-md-6 mb-3">
+        <a href="/usuarios/" class="d-flex align-items-center p-3 bg-white rounded shadow-sm text-decoration-none text-dark hover-bg-light">
+            <i class="bi bi-people-fill fs-4 text-secondary me-3"></i>
+            <div>
+                <h6 class="mb-0 fw-bold">Usuarios</h6>
+                <small class="text-muted">Gestionar personal</small>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 mb-3">
+        <a href="/sucursales/" class="d-flex align-items-center p-3 bg-white rounded shadow-sm text-decoration-none text-dark hover-bg-light">
+            <i class="bi bi-building fs-4 text-secondary me-3"></i>
+            <div>
+                <h6 class="mb-0 fw-bold">Sucursales</h6>
+                <small class="text-muted">Gestionar tiendas</small>
+            </div>
+        </a>
+    </div>
+</div>
+
+<style>
+    /* Custom Styles for Dashboard */
+    .ls-1 { letter-spacing: 1px; }
+    
+    .icon-shape {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .shadow-hover {
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .shadow-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175) !important;
+    }
+
+    .hover-bg-light:hover {
+        background-color: #f8f9fa !important;
+    }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. Cargar Datos del Usuario
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        
+        // Personalizar saludo
+        if (userInfo.username) {
+            // Capitalizar primera letra
+            const name = userInfo.username.charAt(0).toUpperCase() + userInfo.username.slice(1);
+            document.getElementById('welcome-name').textContent = name;
+            
+            // Mostrar Rol
+            const rolMap = {
+                'super_admin': 'Super Admin',
+                'admin_cliente': 'Administrador',
+                'gerente': 'Gerente',
+                'vendedor': 'Vendedor'
+            };
+            document.getElementById('user-role-badge').textContent = rolMap[userInfo.rol] || userInfo.rol;
+        }
+
+        // Mostrar Fecha Actual
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const fecha = new Date().toLocaleDateString('es-CL', options);
+        document.getElementById('current-date').textContent = fecha.charAt(0).toUpperCase() + fecha.slice(1);
+
+        // 2. Lógica de Roles (Ocultar/Mostrar módulos)
+        const rol = userInfo.rol;
+
+        if (rol === 'vendedor') {
+            document.getElementById('card-productos').style.display = 'none';
+            document.getElementById('card-inventario').style.display = 'none';
+            document.getElementById('card-reportes').style.display = 'none';
+            
+            // Ajustar grid para que el POS se vea bien solo
+            document.getElementById('card-ventas').classList.remove('col-md-6', 'col-lg-3');
+            document.getElementById('card-ventas').classList.add('col-md-12', 'col-lg-4');
+        }
+
+        // Mostrar sección admin si corresponde
+        if (rol === 'super_admin' || rol === 'admin_cliente') {
+            document.getElementById('admin-section').style.display = 'flex';
+        }
+    });
+</script>
+{% endblock %}

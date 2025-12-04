@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Producto - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h6 class="text-uppercase text-muted small fw-bold ls-1">Catálogo</h6>
+                <h2 class="fw-bold text-dark"><i class="bi bi-pencil-square me-2"></i>Editar Producto</h2>
+            </div>
+            <button type="button" onclick="cancelar()" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-x-lg me-1"></i> Cancelar
+            </button>
+        </div>
+
+        <div id="loading-spinner" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted small fw-bold text-uppercase ls-1">Recuperando datos...</p>
+        </div>
+
+        <div id="edit-card" class="card border-0 shadow-sm d-none animate-fade-in">
+            <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
+                <span class="badge bg-white text-dark border">ID: <span id="display-id">-</span></span>
+                <span class="text-muted small">Modificando registro existente</span>
+            </div>
+            
+            <div class="card-body p-4">
+                <form id="form-edit-product">
+                    
+                    <h6 class="text-uppercase text-muted small fw-bold mb-3 border-bottom pb-2">Identificación</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label for="sku" class="form-label fw-bold">SKU</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-barcode"></i></span>
+                                <input type="text" class="form-control" id="sku" required>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="nombre" class="form-label fw-bold">Nombre</label>
+                            <input type="text" class="form-control" id="nombre" required>
+                        </div>
+                    </div>
+
+                    <h6 class="text-uppercase text-muted small fw-bold mb-3 border-bottom pb-2">Detalles y Foto</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="categoria" class="form-label fw-bold">Categoría</label>
+                            <select class="form-select" id="categoria" required>
+                                <option value="electronica">🔌 Electrónica</option>
+                                <option value="ropa">👕 Ropa</option>
+                                <option value="alimentos">🥫 Alimentos</option>
+                                <option value="bebidas">🥤 Bebidas</option>
+                                <option value="limpieza">🧹 Limpieza</option>
+                                <option value="otros">📦 Otros</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="imagen" class="form-label fw-bold">Reemplazar Imagen</label>
+                            <input type="file" class="form-control" id="imagen" accept="image/*">
+                            <div id="current-image-preview" class="small mt-2"></div>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="descripcion" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="descripcion" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="bg-light p-3 rounded-3 mb-4 border border-light-subtle">
+                        <h6 class="text-uppercase text-muted small fw-bold mb-3">Ajuste de Precios</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="costo" class="form-label fw-bold text-secondary">Costo Unitario</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="costo" required min="0">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="precio" class="form-label fw-bold text-success">Precio Venta</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-success-subtle text-success border-success-subtle">$</span>
+                                    <input type="number" class="form-control border-success-subtle" id="precio" required min="0">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-text mt-2 small text-muted">
+                            <i class="bi bi-info-circle me-1"></i> Los cambios de precio se reflejarán inmediatamente en el POS y E-commerce.
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <button type="button" onclick="cancelar()" class="btn btn-light text-muted px-4">Descartar Cambios</button>
+                        <button type="submit" class="btn btn-primary px-5 shadow-sm">
+                            <i class="bi bi-save me-2"></i> Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    .bg-success-subtle { background-color: #d1e7dd; }
+    .border-success-subtle { border-color: #a3cfbb; }
+    
+    .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+
+        if (userInfo.rol === 'vendedor') {
+            alert('⛔ Acceso Denegado: Los vendedores no pueden editar productos.');
+            window.location.href = '/productos/';
+            return;
+        }
+
+        if (!productId) {
+            window.location.href = '/productos/';
+            return;
+        }
+
+        await cargarProducto(productId);
+    });
+
+    // Carga los datos existentes y muestra la imagen
+    async function cargarProducto(productId) {
+        const localToken = localStorage.getItem('access_token');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const editCard = document.getElementById('edit-card');
+
+        try {
+            const response = await fetch(`/api/productos/${productId}/`, {
+                headers: { 'Authorization': `Bearer ${localToken}` }
+            });
+
+            if (!response.ok) throw new Error('No se pudo cargar el producto');
+
+            const p = await response.json();
+
+            // Rellenar formulario
+            document.getElementById('display-id').textContent = p.id;
+            document.getElementById('sku').value = p.sku;
+            document.getElementById('nombre').value = p.nombre;
+            document.getElementById('descripcion').value = p.descripcion;
+            document.getElementById('categoria').value = p.categoria;
+            document.getElementById('precio').value = p.precio;
+            document.getElementById('costo').value = p.costo;
+
+            // Mostrar Imagen Actual
+            if (p.imagen) {
+                document.getElementById('current-image-preview').innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <img src="${p.imagen}" alt="Actual" style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #ddd; margin-right: 10px; padding: 5px;">
+                        <small class="text-muted">Imagen actual. Selecciona un archivo para reemplazar.</small>
+                    </div>
+                `;
+            } else {
+                 document.getElementById('current-image-preview').innerHTML = `<small class="text-muted">No hay imagen subida.</small>`;
+            }
+
+
+            // Mostrar formulario
+            loadingSpinner.classList.add('d-none');
+            editCard.classList.remove('d-none');
+
+        } catch (error) {
+            console.error(error);
+            alert('Error al cargar datos del producto. Verifique su conexión.');
+            window.location.href = '/productos/';
+        }
+    }
+
+    // Manejar envío (USANDO FORMDATA para PATCH)
+    document.getElementById('form-edit-product').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const localToken = localStorage.getItem('access_token');
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+        const fileInput = document.getElementById('imagen');
+
+        if(!confirm('¿Confirma guardar los cambios realizados?')) return;
+
+        // --- CREAR FORMDATA PARA ENVIAR BINARIOS ---
+        const formData = new FormData();
+        formData.append('sku', document.getElementById('sku').value);
+        formData.append('nombre', document.getElementById('nombre').value);
+        formData.append('descripcion', document.getElementById('descripcion').value);
+        formData.append('categoria', document.getElementById('categoria').value);
+        formData.append('precio', document.getElementById('precio').value);
+        formData.append('costo', document.getElementById('costo').value);
+
+        // SOLO agregamos la imagen si hay un archivo seleccionado
+        if (fileInput.files.length > 0) {
+            formData.append('imagen', fileInput.files[0]);
+        }
+        
+        // Si no se selecciona nueva imagen, Django automáticamente mantiene la anterior.
+
+        // Feedback visual
+        const btn = document.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
+
+
+        try {
+            const response = await fetch(`/api/productos/${productId}/`, {
+                method: 'PATCH', 
+                headers: {
+                    // NO Content-Type header when using FormData for PATCH
+                    'Authorization': `Bearer ${localToken}`
+                },
+                body: formData // Enviamos el FormData
+            });
+
+            if (response.ok) {
+                alert('✅ Producto actualizado correctamente');
+                window.location.href = `/productos/detalle/?id=${productId}`;
+            } else {
+                const data = await response.json();
+                alert('Error al actualizar: ' + JSON.stringify(data));
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error de conexión');
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+
+    function cancelar() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+        window.location.href = `/productos/detalle/?id=${productId}`;
+    }
+</script>
+{% endblock %}

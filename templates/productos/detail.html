@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalle de Producto - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="/productos/" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-arrow-left me-1"></i> Volver al Catálogo
+        </a>
+        <div id="actions-container">
+            </div>
+    </div>
+
+    <div id="loading-spinner" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted small fw-bold text-uppercase ls-1">Cargando información...</p>
+    </div>
+
+    <div id="product-content" class="d-none animate-fade-in">
+        
+        <div class="card border-0 shadow-sm mb-4 bg-white">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    
+                    <div class="col-md-3 text-center mb-3 mb-md-0 border-end">
+                        <div id="product-image-container" class="bg-light rounded-3 p-3 d-flex align-items-center justify-content-center" style="height: 150px;">
+                            </div>
+                    </div>
+
+                    <div class="col-md-9">
+                        <div class="d-flex justify-content-between align-items-end">
+                            <div>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle mb-2" id="prod-categoria">CATEGORY</span>
+                                <h1 class="display-5 fw-bold text-dark mb-1" id="prod-nombre">-</h1>
+                                <small class="text-muted text-uppercase fw-bold ls-1" id="prod-sku">SKU: -</small>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-uppercase text-muted fw-bold d-block mb-1">Precio de Venta</small>
+                                <h2 class="display-6 fw-bold text-success mb-0" id="prod-precio">$0</h2>
+                            </div>
+                        </div>
+                        <p class="text-muted mb-0 mt-2"><i class="bi bi-building me-1"></i> <span id="prod-compania">-</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3 border-bottom">
+                        <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-info-circle me-2"></i>Información Comercial</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="bloque-costo" class="d-none mb-4 p-3 bg-light rounded border border-light-subtle">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-white p-2 rounded shadow-sm me-3 text-secondary">
+                                    <i class="bi bi-tag-fill fs-4"></i>
+                                </div>
+                                <div>
+                                    <small class="text-uppercase text-muted fw-bold d-block">Costo Unitario</small>
+                                    <span class="fs-4 fw-bold text-dark" id="prod-costo">$0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="small text-muted fw-bold text-uppercase mb-1">Descripción</label>
+                            <p class="text-dark bg-light p-3 rounded" id="prod-descripcion">Sin descripción.</p>
+                        </div>
+
+                        <div class="row text-muted small">
+                            <div class="col-6">
+                                <i class="bi bi-calendar-check me-1"></i> Creado:<br>
+                                <span class="fw-bold text-dark" id="prod-creado">-</span>
+                            </div>
+                            <div class="col-6">
+                                <i class="bi bi-clock-history me-1"></i> Actualizado:<br>
+                                <span class="fw-bold text-dark" id="prod-actualizado">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-boxes me-2"></i>Disponibilidad por Sucursal</h6>
+                        <span class="badge bg-light text-dark border">Total: <span id="total-stock-badge">0</span></span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="ps-4">Sucursal</th>
+                                        <th class="text-center">Stock Físico</th>
+                                        <th class="text-center">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-stock"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white border-top text-center py-3">
+                        <a href="/inventario/movimientos/" class="btn btn-sm btn-outline-primary rounded-pill">
+                            <i class="bi bi-truck me-1"></i> Gestionar Reabastecimiento
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="error-msg" class="alert alert-danger d-none text-center mt-4">
+        No se pudo cargar el producto.
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    .bg-primary-subtle { background-color: #cfe2ff; color: #084298; }
+    
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const localToken = localStorage.getItem('access_token');
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+
+        if (!productId) {
+            window.location.href = '/productos/';
+            return;
+        }
+
+        // Configure UI based on Role
+        if (userInfo.rol !== 'vendedor') {
+            document.getElementById('bloque-costo').classList.remove('d-none');
+            document.getElementById('actions-container').innerHTML = `
+                <a href="/productos/edit/?id=${productId}" class="btn btn-warning shadow-sm me-2">
+                    <i class="bi bi-pencil-square me-1"></i> Editar
+                </a>
+                <button onclick="eliminarProducto(${productId})" class="btn btn-danger shadow-sm">
+                    <i class="bi bi-trash me-1"></i> Eliminar
+                </button>
+            `;
+        }
+
+        try {
+            await cargarProducto(productId);
+        } catch (error) {
+            console.error(error);
+            document.getElementById('loading-spinner').classList.add('d-none');
+            document.getElementById('error-msg').classList.remove('d-none');
+        }
+    });
+
+    async function cargarProducto(productId) {
+        const localToken = localStorage.getItem('access_token');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const content = document.getElementById('product-content');
+
+        try {
+            const res = await fetch(`/api/productos/${productId}/`, {
+                headers: { 'Authorization': `Bearer ${localToken}` }
+            });
+
+            if (!res.ok) throw new Error('Error API Producto');
+            const p = await res.json();
+
+            // --- INYECTAR IMAGEN ---
+            const imageContainer = document.getElementById('product-image-container');
+            if (p.imagen) {
+                // Si la imagen existe, la muestra
+                imageContainer.innerHTML = `<img src="${p.imagen}" alt="${p.nombre}" style="max-width: 100%; height: auto; max-height: 150px; border-radius: 8px;">`;
+            } else {
+                // Si no, muestra el placeholder
+                imageContainer.innerHTML = `<i class="bi bi-card-image text-secondary opacity-25" style="font-size: 4rem;"></i>`;
+            }
+
+            // --- RENDERIZAR DETALLES ---
+            document.getElementById('prod-nombre').textContent = p.nombre;
+            document.getElementById('prod-sku').textContent = `SKU: ${p.sku}`;
+            document.getElementById('prod-categoria').textContent = (p.categoria || '').toUpperCase();
+            document.getElementById('prod-descripcion').textContent = p.descripcion || 'Sin descripción detallada.';
+            document.getElementById('prod-compania').textContent = p.nombre_compania || 'N/A';
+            document.getElementById('prod-precio').textContent = '$' + parseInt(p.precio).toLocaleString('es-CL');
+            document.getElementById('prod-costo').textContent = '$' + parseInt(p.costo).toLocaleString('es-CL');
+            
+            const dateOpts = { year: 'numeric', month: 'short', day: 'numeric' };
+            document.getElementById('prod-creado').textContent = new Date(p.creado_en).toLocaleDateString('es-CL', dateOpts);
+            document.getElementById('prod-actualizado').textContent = new Date(p.actualizado_en).toLocaleDateString('es-CL', dateOpts);
+
+            // Mostrar contenido
+            loadingSpinner.classList.add('d-none');
+            content.classList.remove('d-none');
+
+            // 3. Cargar Stock
+            cargarStock(productId, localToken);
+
+        } catch (error) {
+            console.error('Error cargando producto:', error.message);
+            loadingSpinner.classList.add('d-none');
+            document.getElementById('error-msg').classList.remove('d-none');
+            document.getElementById('error-msg').textContent = "No se pudo cargar el producto. Verifique ID o conexión.";
+        }
+    }
+
+    async function cargarStock(id, tokenAuth) {
+        try {
+            const res = await fetch('/api/inventario/', {
+                headers: { 'Authorization': `Bearer ${tokenAuth}` }
+            });
+            const data = await res.json();
+            const lista = data.results || data;
+            const misItems = lista.filter(i => i.producto == id);
+            
+            const tbody = document.getElementById('tabla-stock');
+            let total = 0;
+            
+            tbody.innerHTML = '';
+            if(misItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-muted fst-italic">Sin stock registrado en sucursales</td></tr>';
+            }
+
+            misItems.forEach(item => {
+                total += item.stock;
+                let badge = '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Disponible</span>';
+                if (item.stock === 0) badge = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Agotado</span>';
+                else if (item.stock <= item.punto_reorden) badge = '<span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">Bajo Stock</span>';
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-4 fw-bold text-secondary">${item.nombre_sucursal}</td>
+                        <td class="text-center fw-bold fs-5">${item.stock}</td>
+                        <td class="text-center">${badge}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('total-stock-badge').textContent = total;
+        } catch(e) { console.error("Error stock", e); }
+    }
+
+    window.eliminarProducto = async function(id) {
+        if(!confirm('¿Eliminar producto definitivamente?')) return;
+        const t = localStorage.getItem('access_token');
+        try {
+            const res = await fetch(`/api/productos/${id}/`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${t}` }
+            });
+            if (res.ok) {
+                alert('Producto eliminado');
+                window.location.href = '/productos/';
+            } else {
+                alert('No se puede eliminar (probablemente tiene ventas asociadas).');
+            }
+        } catch(e) { alert('Error de conexión'); }
+    };
+</script>
+{% endblock %}

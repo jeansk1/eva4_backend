@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+
+{% block title %}Reporte de Ventas - TemucoSoft{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h6 class="text-uppercase text-muted small fw-bold ls-1">Inteligencia de Negocios</h6>
+        <h2 class="fw-bold text-dark"><i class="bi bi-graph-up-arrow me-2"></i>Análisis de Ventas</h2>
+        <p class="text-muted mb-0 small">Rendimiento transaccional por período.</p>
+    </div>
+    <button class="btn btn-success shadow-sm" onclick="exportarReporteVentas()">
+        <i class="bi bi-file-earmark-spreadsheet me-2"></i>Exportar Detalle
+    </button>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body bg-light rounded-3">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label x-small fw-bold text-uppercase">Sucursal</label>
+                <select id="filtro-sucursal" class="form-select form-select-sm border-0 shadow-none">
+                    <option value="">Todas las Sucursales</option>
+                    </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label x-small fw-bold text-uppercase">Fecha Desde</label>
+                <input type="date" id="fecha-desde" class="form-control form-control-sm border-0 shadow-none">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label x-small fw-bold text-uppercase">Fecha Hasta</label>
+                <input type="date" id="fecha-hasta" class="form-control form-control-sm border-0 shadow-none">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary w-100 btn-sm shadow-sm" onclick="generarReporte()">
+                    <i class="bi bi-arrow-repeat me-1"></i> Actualizar Informe
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 bg-success text-white">
+            <div class="card-body text-center">
+                <h6 class="text-uppercase opacity-75 small fw-bold mb-1">Ventas Totales (Periodo)</h6>
+                <h2 id="kpi-total-ventas" class="display-5 fw-bold mb-0">-</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 bg-white">
+            <div class="card-body text-center border-start border-5 border-primary">
+                <h6 class="text-uppercase text-muted small fw-bold mb-1">Transacciones</h6>
+                <h2 id="kpi-count-ventas" class="display-5 fw-bold text-dark mb-0">-</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 bg-white">
+            <div class="card-body text-center border-start border-5 border-info">
+                <h6 class="text-uppercase text-muted small fw-bold mb-1">Ticket Promedio</h6>
+                <h2 id="kpi-ticket-promedio" class="display-5 fw-bold text-dark mb-0">-</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3 border-bottom-0">
+        <h5 class="mb-0 fw-bold text-secondary">Evolución Diaria</h5>
+    </div>
+    <div class="card-body pt-0">
+        <div style="height: 300px;">
+            <canvas id="chartVentas"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 border-bottom-0">
+        <h5 class="mb-0 fw-bold text-secondary">Detalle de Transacciones</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tabla-ventas-reporte">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 text-uppercase text-secondary x-small fw-bold">Folio</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">Fecha / Hora</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">Sucursal</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">Vendedor</th>
+                        <th class="text-center text-uppercase text-secondary x-small fw-bold">Método Pago</th>
+                        <th class="text-end pe-4 text-uppercase text-secondary x-small fw-bold">Monto Total</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-ventas">
+                    <tr><td colspan="6" class="text-center py-5 text-muted small">Haga clic en "Actualizar Informe" para ver datos.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    .x-small { font-size: 0.7rem; }
+    .font-monospace { font-family: monospace; letter-spacing: -0.5px; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let chartInstance = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Configurar fechas por defecto (Últimos 30 días)
+        const hoy = new Date();
+        const haceMes = new Date();
+        haceMes.setDate(hoy.getDate() - 30);
+
+        document.getElementById('fecha-hasta').valueAsDate = hoy;
+        document.getElementById('fecha-desde').valueAsDate = haceMes;
+
+        await cargarSucursales();
+        generarReporte();
+    });
+
+    async function cargarSucursales() {
+        const token = localStorage.getItem('access_token');
+        try {
+            const res = await fetch('/api/sucursales/', { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await res.json();
+            const select = document.getElementById('filtro-sucursal');
+            (data.results || data).forEach(s => select.innerHTML += `<option value="${s.id}">${s.nombre}</option>`);
+        } catch (e) { console.error('Error cargando sucursales'); }
+    }
+
+    async function generarReporte() {
+        const token = localStorage.getItem('access_token');
+        const sucursalId = document.getElementById('filtro-sucursal').value;
+        const desde = document.getElementById('fecha-desde').value;
+        const hasta = document.getElementById('fecha-hasta').value;
+        const tbody = document.getElementById('tbody-ventas');
+
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+
+        let url = `/api/ventas/?fecha_desde=${desde}&fecha_hasta=${hasta}`;
+        if (sucursalId) url += `&sucursal=${sucursalId}`;
+
+        try {
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await res.json();
+            const ventas = data.results || data;
+
+            if (ventas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">No se encontraron ventas en este periodo.</td></tr>';
+                actualizarKPIs(0, 0);
+                actualizarGrafico({});
+                return;
+            }
+
+            let totalVentas = 0;
+            let ventasPorDia = {}; 
+
+            tbody.innerHTML = ''; 
+
+            ventas.sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en));
+
+            ventas.forEach(v => {
+                const monto = parseFloat(v.total);
+                totalVentas += monto;
+                
+                const fechaStr = v.creado_en.split('T')[0];
+                if (!ventasPorDia[fechaStr]) ventasPorDia[fechaStr] = 0;
+                ventasPorDia[fechaStr] += monto;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-4 font-monospace text-secondary">#${v.id}</td>
+                        <td>
+                            <div class="fw-bold text-dark">${new Date(v.creado_en).toLocaleDateString('es-CL')}</div>
+                            <small class="text-muted">${new Date(v.creado_en).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small>
+                        </td>
+                        <td>${v.nombre_sucursal}</td>
+                        <td>${v.nombre_vendedor}</td>
+                        <td class="text-center"><span class="badge bg-light text-dark border text-uppercase">${v.metodo_pago}</span></td>
+                        <td class="text-end pe-4 fw-bold text-success font-monospace">$${monto.toLocaleString('es-CL')}</td>
+                    </tr>
+                `;
+            });
+
+            actualizarKPIs(totalVentas, ventas.length);
+            actualizarGrafico(ventasPorDia);
+
+        } catch (error) {
+            console.error(error);
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-5">Error al cargar datos.</td></tr>';
+        }
+    }
+
+    function actualizarKPIs(total, cantidad) {
+        document.getElementById('kpi-total-ventas').textContent = '$' + total.toLocaleString('es-CL');
+        document.getElementById('kpi-count-ventas').textContent = cantidad;
+        
+        const promedio = cantidad > 0 ? Math.round(total / cantidad) : 0;
+        document.getElementById('kpi-ticket-promedio').textContent = '$' + promedio.toLocaleString('es-CL');
+    }
+
+    function actualizarGrafico(datosDia) {
+        const ctx = document.getElementById('chartVentas').getContext('2d');
+        const etiquetas = Object.keys(datosDia).sort();
+        const valores = etiquetas.map(fecha => datosDia[fecha]);
+
+        if (chartInstance) chartInstance.destroy();
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: etiquetas,
+                datasets: [{
+                    label: 'Ventas Diarias ($)',
+                    data: valores,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    fill: true,
+                    tension: 0.4, // Smoother curve
+                    pointRadius: 4,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#0d6efd',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#fff',
+                        titleColor: '#000',
+                        bodyColor: '#000',
+                        borderColor: '#e9ecef',
+                        borderWidth: 1,
+                        padding: 10,
+                        displayColors: false,
+                    }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { borderDash: [2, 2], color: '#f0f0f0' },
+                        ticks: { font: { size: 11 } }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 } }
+                    }
+                }
+            }
+        });
+    }
+
+    function exportarReporteVentas() {
+        const table = document.getElementById('tabla-ventas-reporte');
+        let csv = [];
+        const rows = table.querySelectorAll("tr");
+        
+        for (let i = 0; i < rows.length; i++) {
+            let row = [], cols = rows[i].querySelectorAll("td, th");
+            for (let j = 0; j < cols.length; j++) {
+                let text = cols[j].innerText.replace('$', '').replace(/\./g, '').replace(/\,/g, '').replace(/\n/g, ' '); 
+                row.push('"' + text.trim() + '"');
+            }
+            csv.push(row.join(","));
+        }
+
+        const csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
+        const link = document.createElement("a");
+        link.download = "reporte_ventas.csv";
+        link.href = window.URL.createObjectURL(csvFile);
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel de Ventas - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h6 class="text-uppercase text-muted small fw-bold ls-1">Punto de Venta</h6>
+        <h2 class="fw-bold text-dark"><i class="bi bi-speedometer2 me-2"></i>Mi Panel</h2>
+    </div>
+    <div class="bg-white px-3 py-2 rounded-pill border shadow-sm d-flex align-items-center">
+        <i class="bi bi-calendar-date me-2 text-primary"></i>
+        <span class="fw-bold text-dark" id="fecha-hoy">-</span>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100 bg-primary text-white overflow-hidden">
+            <div class="card-body position-relative">
+                <div class="position-absolute top-0 end-0 p-3 opacity-25">
+                    <i class="bi bi-cash-coin display-1"></i>
+                </div>
+                <h6 class="text-uppercase opacity-75 fw-bold small">Ventas de Hoy</h6>
+                <h2 class="display-4 fw-bold mb-0" id="kpi-total-hoy">Cargando...</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100 bg-success text-white overflow-hidden">
+            <div class="card-body position-relative">
+                <div class="position-absolute top-0 end-0 p-3 opacity-25">
+                    <i class="bi bi-receipt display-1"></i>
+                </div>
+                <h6 class="text-uppercase opacity-75 fw-bold small">Transacciones</h6>
+                <h2 class="display-4 fw-bold mb-0" id="kpi-count-hoy">-</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <div class="col-md-6">
+        <a href="/ventas/" class="card border-0 shadow-sm h-100 text-decoration-none hover-lift">
+            <div class="card-body p-4 d-flex align-items-center">
+                <div class="icon-square bg-primary-subtle text-primary rounded-3 me-3">
+                    <i class="bi bi-cart-plus-fill fs-2"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-dark mb-1">Nueva Venta (POS)</h5>
+                    <p class="text-muted small mb-0">Ir a la pantalla de caja rápida.</p>
+                </div>
+                <i class="bi bi-arrow-right ms-auto text-primary"></i>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6">
+        <a href="/ventas/historial/" class="card border-0 shadow-sm h-100 text-decoration-none hover-lift">
+            <div class="card-body p-4 d-flex align-items-center">
+                <div class="icon-square bg-info-subtle text-info rounded-3 me-3">
+                    <i class="bi bi-clock-history fs-2"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-dark mb-1">Historial de Ventas</h5>
+                    <p class="text-muted small mb-0">Revisar y reimprimir tickets.</p>
+                </div>
+                <i class="bi bi-arrow-right ms-auto text-info"></i>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 border-bottom-0">
+        <h5 class="mb-0 fw-bold text-secondary">Mis Últimas Ventas</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 text-uppercase text-secondary x-small fw-bold">Folio</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">Hora</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">Sucursal</th>
+                        <th class="text-center text-uppercase text-secondary x-small fw-bold">Método</th>
+                        <th class="text-end text-uppercase text-secondary x-small fw-bold pe-4">Total</th>
+                        <th class="text-center text-uppercase text-secondary x-small fw-bold">Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-ultimas-ventas">
+                    <tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    .x-small { font-size: 0.7rem; }
+    .bg-primary-subtle { background-color: #cfe2ff; }
+    .bg-info-subtle { background-color: #cff4fc; }
+    
+    .icon-square {
+        width: 64px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .hover-lift { transition: transform 0.2s; }
+    .hover-lift:hover { transform: translateY(-5px); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const hoy = new Date();
+        // Capitalize first letter of date
+        const fechaStr = hoy.toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        document.getElementById('fecha-hoy').textContent = fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1);
+        
+        // Local date format YYYY-MM-DD
+        const year = hoy.getFullYear();
+        const month = String(hoy.getMonth() + 1).padStart(2, '0');
+        const day = String(hoy.getDate()).padStart(2, '0');
+        const fechaApi = `${year}-${month}-${day}`;
+
+        await cargarResumenDiario(fechaApi);
+    });
+
+    async function cargarResumenDiario(fecha) {
+        const token = localStorage.getItem('access_token'); // Local token
+        try {
+            const response = await fetch(`/api/ventas/?fecha_desde=${fecha}&fecha_hasta=${fecha}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) throw new Error('Error al cargar ventas');
+
+            const data = await response.json();
+            const ventas = data.results || data;
+
+            // KPIs
+            let totalHoy = 0;
+            ventas.forEach(v => totalHoy += parseFloat(v.total));
+
+            document.getElementById('kpi-total-hoy').textContent = '$' + totalHoy.toLocaleString('es-CL');
+            document.getElementById('kpi-count-hoy').textContent = ventas.length;
+
+            // Recent Sales Table
+            const tbody = document.getElementById('tabla-ultimas-ventas');
+            tbody.innerHTML = '';
+
+            if (ventas.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-slash-circle display-4 opacity-25 mb-2"></i>
+                            <p class="mb-0">No has realizado ventas hoy.</p>
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            ventas.sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en));
+            const ultimas = ventas.slice(0, 5);
+
+            ultimas.forEach(v => {
+                const hora = new Date(v.creado_en).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                // Payment Badge
+                let badgeClass = 'bg-secondary';
+                if(v.metodo_pago === 'efectivo') badgeClass = 'bg-success';
+                if(v.metodo_pago === 'debito') badgeClass = 'bg-primary';
+                if(v.metodo_pago === 'credito') badgeClass = 'bg-warning text-dark';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-4 font-monospace text-secondary">#${v.id}</td>
+                        <td>${hora}</td>
+                        <td>${v.nombre_sucursal}</td>
+                        <td class="text-center"><span class="badge ${badgeClass} bg-opacity-75 border border-0 text-uppercase" style="font-size: 0.65rem;">${v.metodo_pago}</span></td>
+                        <td class="text-end pe-4 fw-bold text-dark font-monospace">$${parseFloat(v.total).toLocaleString('es-CL')}</td>
+                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">OK</span></td>
+                    </tr>
+                `;
+            });
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('tabla-ultimas-ventas').innerHTML = 
+                '<tr><td colspan="6" class="text-center text-danger py-4">Error de conexión</td></tr>';
+        }
+    }
+</script>
+{% endblock %}

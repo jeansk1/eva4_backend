@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+
+{% block title %}Reporte de Proveedores - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h6 class="text-uppercase text-muted small fw-bold ls-1">Inteligencia de Negocios</h6>
+        <h2 class="fw-bold text-dark"><i class="bi bi-pie-chart me-2"></i>Análisis de Proveedores</h2>
+        <p class="text-muted mb-0 small">Rendimiento y estadísticas de abastecimiento.</p>
+    </div>
+    <button class="btn btn-success shadow-sm" onclick="exportarCSV()">
+        <i class="bi bi-file-earmark-spreadsheet me-2"></i>Exportar Datos
+    </button>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-building fs-4 me-2 opacity-75"></i>
+                    <h6 class="text-uppercase mb-0 small opacity-75 fw-bold">Total Proveedores</h6>
+                </div>
+                <h2 id="kpi-total-prov" class="fw-bold mb-0 display-6">-</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 bg-white">
+            <div class="card-body border-start border-5 border-success">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-cash-stack fs-4 me-2 text-success"></i>
+                    <h6 class="text-uppercase mb-0 small text-muted fw-bold">Gasto Histórico</h6>
+                </div>
+                <h2 id="kpi-total-gasto" class="fw-bold mb-0 display-6 text-dark">-</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 bg-white">
+            <div class="card-body border-start border-5 border-info">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-award fs-4 me-2 text-info"></i>
+                    <h6 class="text-uppercase mb-0 small text-muted fw-bold">Proveedor Principal</h6>
+                </div>
+                <h4 id="kpi-top-prov" class="fw-bold mb-0 text-truncate text-dark">-</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 border-bottom-0">
+        <h5 class="mb-0 fw-bold text-secondary">Detalle de Relación Comercial</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tabla-reporte">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 text-uppercase text-secondary x-small fw-bold">Proveedor</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">RUT</th>
+                        <th class="text-center text-uppercase text-secondary x-small fw-bold">Compras</th>
+                        <th class="text-center text-uppercase text-secondary x-small fw-bold">Prod. Únicos</th>
+                        <th class="text-end text-uppercase text-secondary x-small fw-bold">Total Gastado</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">Última Compra</th>
+                        <th class="text-end pe-4 text-uppercase text-secondary x-small fw-bold">Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-proveedores">
+                    <tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    .x-small { font-size: 0.75rem; }
+    .font-monospace { font-family: monospace; letter-spacing: -0.5px; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        await generarReporte();
+    });
+
+    async function generarReporte() {
+        const token = localStorage.getItem('access_token'); // Local token
+        try {
+            // 1. Parallel Fetch
+            const [resProv, resCompras] = await Promise.all([
+                fetch('/api/proveedores/', { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch('/api/compras/', { headers: { 'Authorization': `Bearer ${token}` } })
+            ]);
+
+            const proveedores = await resProv.json();
+            const compras = await resCompras.json();
+
+            // 2. Process Data
+            const stats = {}; 
+
+            proveedores.forEach(p => {
+                stats[p.id] = {
+                    nombre: p.nombre,
+                    rut: p.rut,
+                    gasto: 0,
+                    count: 0,
+                    productos: new Set(), 
+                    ultima_fecha: null,
+                    obj: p 
+                };
+            });
+
+            compras.forEach(c => {
+                const pId = c.proveedor; 
+                if (stats[pId]) {
+                    stats[pId].gasto += parseFloat(c.total);
+                    stats[pId].count += 1;
+                    
+                    const fechaCompra = new Date(c.fecha);
+                    if (!stats[pId].ultima_fecha || fechaCompra > stats[pId].ultima_fecha) {
+                        stats[pId].ultima_fecha = fechaCompra;
+                    }
+
+                    if (c.items && Array.isArray(c.items)) {
+                        c.items.forEach(item => {
+                            stats[pId].productos.add(item.producto);
+                        });
+                    }
+                }
+            });
+
+            renderizarTabla(Object.values(stats));
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('tbody-proveedores').innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4">Error cargando datos.</td></tr>';
+        }
+    }
+
+    function renderizarTabla(listaDatos) {
+        const tbody = document.getElementById('tbody-proveedores');
+        tbody.innerHTML = '';
+
+        if (listaDatos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted">No hay datos disponibles.</td></tr>';
+            return;
+        }
+
+        // KPIs
+        let totalGasto = 0;
+        let topProvNombre = '-';
+        let maxGasto = -1;
+
+        // Sort by Spend Descending
+        listaDatos.sort((a, b) => b.gasto - a.gasto);
+
+        listaDatos.forEach(d => {
+            totalGasto += d.gasto;
+            if (d.gasto > maxGasto) {
+                maxGasto = d.gasto;
+                topProvNombre = d.nombre;
+            }
+
+            const fechaStr = d.ultima_fecha ? d.ultima_fecha.toISOString().split('T')[0] : '-';
+            const productosCount = d.productos.size; 
+
+            tbody.innerHTML += `
+                <tr>
+                    <td class="ps-4 fw-bold text-dark">${d.nombre}</td>
+                    <td><span class="badge bg-light text-secondary border border-0">${d.rut}</span></td>
+                    <td class="text-center"><span class="badge bg-primary-subtle text-primary rounded-pill px-3">${d.count}</span></td>
+                    <td class="text-center"><span class="badge bg-info-subtle text-info rounded-pill px-3">${productosCount}</span></td>
+                    <td class="text-end font-monospace fw-bold text-success">$${d.gasto.toLocaleString('es-CL')}</td>
+                    <td class="text-muted small">${fechaStr}</td>
+                    <td class="text-end pe-4">
+                        <a href="/proveedores/detalle/?id=${d.obj.id}" class="btn btn-sm btn-outline-secondary border-0 shadow-sm">
+                            <i class="bi bi-eye-fill"></i>
+                        </a>
+                    </td>
+                </tr>
+            `;
+        });
+
+        // Update KPIs
+        document.getElementById('kpi-total-prov').textContent = listaDatos.length;
+        document.getElementById('kpi-total-gasto').textContent = '$' + totalGasto.toLocaleString('es-CL');
+        document.getElementById('kpi-top-prov').textContent = topProvNombre;
+    }
+
+    function exportarCSV() {
+        const table = document.getElementById('tabla-reporte');
+        let csv = [];
+        const rows = table.querySelectorAll("tr");
+        
+        for (let i = 0; i < rows.length; i++) {
+            let row = [], cols = rows[i].querySelectorAll("td, th");
+            for (let j = 0; j < cols.length - 1; j++) { 
+                let text = cols[j].innerText.replace('$', '').replace(/\./g, ''); 
+                row.push('"' + text + '"');
+            }
+            csv.push(row.join(","));
+        }
+
+        const csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
+        const downloadLink = document.createElement("a");
+        downloadLink.download = "reporte_proveedores.csv";
+        downloadLink.href = window.URL.createObjectURL(csvFile);
+        downloadLink.style.display = "none";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+    }
+</script>
+{% endblock %}

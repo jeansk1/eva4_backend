@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+{% block title %}Historial de Ventas - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h6 class="text-uppercase text-muted small fw-bold ls-1">Punto de Venta</h6>
+        <h2 class="fw-bold text-dark"><i class="bi bi-clock-history me-2"></i>Historial de Transacciones</h2>
+    </div>
+    <a href="/ventas/" class="btn btn-primary shadow-sm px-4">
+        <i class="bi bi-cart-plus me-2"></i>Nueva Venta
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body bg-light rounded-3 p-3">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label x-small fw-bold text-uppercase text-muted">Sucursal</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-0"><i class="bi bi-shop"></i></span>
+                    <select id="filtro-sucursal" class="form-select border-0 shadow-none">
+                        <option value="">Todas</option>
+                        </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label x-small fw-bold text-uppercase text-muted">Desde</label>
+                <input type="date" id="fecha-desde" class="form-control border-0 shadow-none">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label x-small fw-bold text-uppercase text-muted">Hasta</label>
+                <input type="date" id="fecha-hasta" class="form-control border-0 shadow-none">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-secondary w-100 shadow-sm" onclick="cargarHistorial()">
+                    <i class="bi bi-filter me-2"></i>Filtrar Resultados
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light border-bottom">
+                    <tr>
+                        <th class="ps-4 text-uppercase text-secondary x-small fw-bold">Folio</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">Fecha / Hora</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">Sucursal</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">Vendedor</th>
+                        <th class="text-center text-uppercase text-secondary x-small fw-bold">Pago</th>
+                        <th class="text-end text-uppercase text-secondary x-small fw-bold">Total</th>
+                        <th class="text-end pe-4 text-uppercase text-secondary x-small fw-bold">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-historial">
+                    <tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer bg-white py-3 border-top-0">
+        <small class="text-muted">Mostrando últimas transacciones.</small>
+    </div>
+</div>
+
+<div class="modal fade" id="modalDetalle" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-light border-bottom-0">
+                <h5 class="modal-title fw-bold">Detalle Venta <span class="badge bg-dark ms-2" id="modal-folio">#</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="p-4 bg-white">
+                    <div class="d-flex justify-content-between mb-4">
+                        <div>
+                            <small class="text-muted d-block text-uppercase x-small fw-bold">Fecha Emisión</small>
+                            <span class="fw-bold text-dark" id="modal-fecha">-</span>
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted d-block text-uppercase x-small fw-bold">Estado</small>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3">COMPLETADA</span>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive mb-3 border rounded">
+                        <table class="table table-sm table-borderless mb-0">
+                            <thead class="bg-light border-bottom">
+                                <tr>
+                                    <th class="ps-3 text-muted x-small fw-bold text-uppercase">Producto</th>
+                                    <th class="text-center text-muted x-small fw-bold text-uppercase">Cant.</th>
+                                    <th class="text-end pe-3 text-muted x-small fw-bold text-uppercase">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modal-items">
+                                </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                        <span class="fs-5 fw-bold text-dark">Total Pagado</span>
+                        <span class="fs-3 fw-bold text-primary font-monospace" id="modal-total">$0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top-0">
+                <a href="#" id="btn-ver-recibo" class="btn btn-outline-dark w-100 shadow-sm" target="_blank">
+                    <i class="bi bi-printer me-2"></i> Imprimir Ticket Oficial
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    .x-small { font-size: 0.7rem; }
+    .font-monospace { font-family: monospace; letter-spacing: -0.5px; }
+    .bg-success-subtle { background-color: #d1e7dd; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const hoy = new Date();
+        const primero = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        const fmtDate = d => d.toISOString().split('T')[0];
+        
+        document.getElementById('fecha-hasta').value = fmtDate(hoy);
+        document.getElementById('fecha-desde').value = fmtDate(primero);
+
+        await cargarSucursales();
+        cargarHistorial();
+    });
+
+    async function cargarSucursales() {
+        const token = localStorage.getItem('access_token'); // Local token
+        try {
+            const res = await fetch('/api/sucursales/', { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await res.json();
+            const select = document.getElementById('filtro-sucursal');
+            (data.results || data).forEach(s => select.innerHTML += `<option value="${s.id}">${s.nombre}</option>`);
+        } catch (e) { console.error('Error cargando sucursales'); }
+    }
+
+    async function cargarHistorial() {
+        const token = localStorage.getItem('access_token'); // Local token
+        const sucursal = document.getElementById('filtro-sucursal').value;
+        const desde = document.getElementById('fecha-desde').value;
+        const hasta = document.getElementById('fecha-hasta').value;
+        const tbody = document.getElementById('tabla-historial');
+
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+
+        let url = `/api/ventas/?fecha_desde=${desde}&fecha_hasta=${hasta}`;
+        if (sucursal) url += `&sucursal=${sucursal}`;
+
+        try {
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            
+            if (!res.ok) throw new Error('Error API');
+
+            const data = await res.json();
+            const ventas = data.results || data;
+
+            tbody.innerHTML = '';
+
+            if (ventas.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-receipt-cutoff display-4 opacity-25 mb-2"></i>
+                            <p class="mb-0">No se encontraron ventas en este periodo.</p>
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            ventas.sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en));
+
+            ventas.forEach(v => {
+                const fecha = new Date(v.creado_en);
+                
+                // Payment Badge Style
+                let badgeClass = 'bg-secondary';
+                if(v.metodo_pago === 'efectivo') badgeClass = 'bg-success';
+                if(v.metodo_pago === 'debito') badgeClass = 'bg-primary';
+                if(v.metodo_pago === 'credito') badgeClass = 'bg-warning text-dark';
+                
+                const row = `
+                    <tr>
+                        <td class="ps-4 font-monospace text-secondary">#${v.id}</td>
+                        <td>
+                            <div class="fw-bold text-dark">${fecha.toLocaleDateString('es-CL')}</div>
+                            <small class="text-muted">${fecha.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small>
+                        </td>
+                        <td>${v.nombre_sucursal}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-person-fill text-secondary me-2"></i>
+                                <span>${v.nombre_vendedor}</span>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge ${badgeClass} bg-opacity-75 border border-0 text-uppercase px-2" style="font-size: 0.7rem;">${v.metodo_pago}</span>
+                        </td>
+                        <td class="text-end font-monospace fw-bold text-success">$${parseFloat(v.total).toLocaleString('es-CL')}</td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-sm btn-light text-primary border shadow-sm" onclick="abrirDetalle(${v.id})" title="Ver Detalle">
+                                <i class="bi bi-eye-fill"></i> Detalle
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+
+        } catch (error) {
+            console.error(error);
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4">Error de conexión.</td></tr>';
+        }
+    }
+
+    async function abrirDetalle(idVenta) {
+        const token = localStorage.getItem('access_token'); // Local token
+        const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
+        modal.show();
+        
+        document.getElementById('modal-items').innerHTML = '<tr><td colspan="3" class="text-center py-3">Cargando items...</td></tr>';
+
+        try {
+            const res = await fetch(`/api/ventas/${idVenta}/`, { 
+                headers: { 'Authorization': `Bearer ${token}` } 
+            });
+            const venta = await res.json();
+
+            document.getElementById('modal-folio').textContent = '#' + venta.id;
+            document.getElementById('modal-fecha').textContent = new Date(venta.creado_en).toLocaleString();
+            document.getElementById('modal-total').textContent = '$' + parseFloat(venta.total).toLocaleString('es-CL');
+            document.getElementById('btn-ver-recibo').href = `/ventas/recibo/?id=${venta.id}`;
+
+            const tbody = document.getElementById('modal-items');
+            tbody.innerHTML = '';
+
+            if (venta.items && venta.items.length > 0) {
+                venta.items.forEach(item => {
+                    const nombre = item.nombre_producto || `Producto ID ${item.producto}`;
+                    const subtotal = item.subtotal || (item.cantidad * item.precio_unitario);
+                    
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="ps-3 py-2">
+                                <span class="fw-bold text-dark d-block">${nombre}</span>
+                                <small class="text-muted">Unitario: $${parseFloat(item.precio_unitario).toLocaleString('es-CL')}</small>
+                            </td>
+                            <td class="text-center py-2 align-middle"><span class="badge bg-light text-dark border">x${item.cantidad}</span></td>
+                            <td class="text-end pe-3 py-2 align-middle fw-bold font-monospace">$${parseFloat(subtotal).toLocaleString('es-CL')}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Detalle de items no disponible en vista rápida.<br>Ver Recibo Oficial.</td></tr>';
+            }
+
+        } catch (error) {
+            document.getElementById('modal-items').innerHTML = '<tr><td colspan="3" class="text-danger text-center">Error cargando detalle</td></tr>';
+        }
+    }
+</script>
+{% endblock %}

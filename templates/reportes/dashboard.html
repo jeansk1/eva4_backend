@@ -1,0 +1,363 @@
+{% extends 'base.html' %}
+
+{% block title %}Reportes - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 gap-2">
+    <div>
+        <h6 class="text-uppercase text-muted small fw-bold ls-1">Business Intelligence</h6>
+        <h2 class="fw-bold text-dark mb-0">Dashboard de Gestión</h2>
+        <p class="text-muted small mb-0" id="fecha-actual">Cargando fecha...</p>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="icon-shape bg-primary-subtle text-primary rounded-3 me-3">
+                        <i class="bi bi-currency-dollar fs-4"></i>
+                    </div>
+                    <h6 class="text-muted text-uppercase fw-bold mb-0 small">Ventas Mes</h6>
+                </div>
+                <h3 class="fw-bold text-dark mb-1" id="totalVentas">Cargando...</h3>
+                <small class="text-muted">Acumulado mes actual</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="icon-shape bg-success-subtle text-success rounded-3 me-3">
+                        <i class="bi bi-receipt fs-4"></i>
+                    </div>
+                    <h6 class="text-muted text-uppercase fw-bold mb-0 small">Transacciones</h6>
+                </div>
+                <h3 class="fw-bold text-dark mb-1" id="totalTransacciones">-</h3>
+                <small class="text-muted">Operaciones realizadas</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="icon-shape bg-warning-subtle text-warning rounded-3 me-3">
+                        <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+                    </div>
+                    <h6 class="text-muted text-uppercase fw-bold mb-0 small">Alerta Stock</h6>
+                </div>
+                <h3 class="fw-bold text-dark mb-1" id="totalBajoStock">-</h3>
+                <small class="text-muted">Productos críticos</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="icon-shape bg-info-subtle text-info rounded-3 me-3">
+                        <i class="bi bi-globe fs-4"></i>
+                    </div>
+                    <h6 class="text-muted text-uppercase fw-bold mb-0 small">E-commerce</h6>
+                </div>
+                <h3 class="fw-bold text-dark mb-1" id="totalOrdenes">-</h3>
+                <small class="text-muted">Pedidos pendientes</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
+                <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-graph-up me-2"></i>Ventas por Período</h5>
+                <button class="btn btn-sm btn-light text-muted" onclick="exportarTablaCSV('tabla-ventas-resultado', 'ventas.csv')" title="Descargar CSV">
+                    <i class="bi bi-download"></i>
+                </button>
+            </div>
+            <div class="card-body bg-light-subtle">
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label x-small fw-bold text-uppercase">Desde</label>
+                        <input type="date" class="form-control form-control-sm border-0 shadow-none" id="fechaDesdeVentas">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label x-small fw-bold text-uppercase">Hasta</label>
+                        <input type="date" class="form-control form-control-sm border-0 shadow-none" id="fechaHastaVentas">
+                    </div>
+                    <div class="col-12 mt-2">
+                        <button class="btn btn-primary w-100 btn-sm" onclick="generarReporteVentas()">
+                            Actualizar Datos
+                        </button>
+                    </div>
+                </div>
+                <div id="resultadoVentas" class="bg-white rounded-3 shadow-sm border" style="height: 300px; overflow-y: auto;">
+                    <div class="d-flex h-100 align-items-center justify-content-center text-muted small">
+                        Seleccione un rango de fechas
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
+                <h5 class="mb-0 fw-bold text-success"><i class="bi bi-box-seam me-2"></i>Estado de Inventario</h5>
+                <button class="btn btn-sm btn-light text-muted" onclick="exportarTablaCSV('tabla-stock-resultado', 'stock.csv')" title="Descargar CSV">
+                    <i class="bi bi-download"></i>
+                </button>
+            </div>
+            <div class="card-body bg-light-subtle">
+                <div class="mb-3">
+                    <label class="form-label x-small fw-bold text-uppercase">Filtrar por Sucursal</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-0"><i class="bi bi-shop"></i></span>
+                        <select class="form-select border-0 shadow-none" id="sucursalStock">
+                            <option value="">Todas las sucursales</option>
+                        </select>
+                        <button class="btn btn-success" onclick="generarReporteStock()">Consultar</button>
+                    </div>
+                </div>
+                <div id="resultadoStock" class="bg-white rounded-3 shadow-sm border" style="height: 300px; overflow-y: auto;">
+                     <div class="d-flex h-100 align-items-center justify-content-center text-muted small">
+                        Consulte para ver detalles
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    .x-small { font-size: 0.7rem; }
+    .bg-light-subtle { background-color: #f8f9fa; }
+    
+    .icon-shape {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Configuración de Fechas
+    const hoy = new Date();
+    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    const fmtDate = d => d.toISOString().split('T')[0];
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const fechaStr = hoy.toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        
+        const elFecha = document.getElementById('fecha-actual');
+        if(elFecha) elFecha.textContent = fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1);
+        
+        const inputDesde = document.getElementById('fechaDesdeVentas');
+        const inputHasta = document.getElementById('fechaHastaVentas');
+        
+        if(inputDesde) inputDesde.value = fmtDate(primerDiaMes);
+        if(inputHasta) inputHasta.value = fmtDate(hoy);
+
+        cargarDatosIniciales();
+    });
+
+    async function cargarDatosIniciales() {
+        // Usamos la variable 'token' que viene de base.html
+        try {
+            // 1. Sucursales
+            const resSuc = await fetch('/api/sucursales/', { headers: { 'Authorization': `Bearer ${token}` } });
+            const sucursales = await resSuc.json();
+            const select = document.getElementById('sucursalStock');
+            if(select) {
+                const listaSucursales = sucursales.results || sucursales;
+                listaSucursales.forEach(s => 
+                    select.innerHTML += `<option value="${s.id}">${s.nombre}</option>`
+                );
+            }
+
+            // 2. Ventas Mes
+            const resVentas = await fetch(`/api/ventas/?fecha_desde=${fmtDate(primerDiaMes)}&fecha_hasta=${fmtDate(hoy)}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const dataVentas = await resVentas.json();
+            const listaVentas = dataVentas.results || dataVentas; 
+            const totalMonto = listaVentas.reduce((sum, v) => sum + parseFloat(v.total), 0);
+            
+            const elTotalVentas = document.getElementById('totalVentas');
+            const elTotalTrans = document.getElementById('totalTransacciones');
+            
+            if(elTotalVentas) elTotalVentas.textContent = `$${totalMonto.toLocaleString('es-CL')}`;
+            if(elTotalTrans) elTotalTrans.textContent = dataVentas.count || listaVentas.length;
+
+            // 3. Stock
+            const resStock = await fetch('/api/reportes/?tipo=stock', { headers: { 'Authorization': `Bearer ${token}` } });
+            const dataStock = await resStock.json();
+            if (dataStock.reporte_stock) {
+                const totalBajo = dataStock.reporte_stock.reduce((sum, s) => sum + s.bajo_stock, 0);
+                const totalAgotado = dataStock.reporte_stock.reduce((sum, s) => sum + s.agotado, 0);
+                const totalProblemas = totalBajo + totalAgotado;
+                
+                const elBajo = document.getElementById('totalBajoStock');
+                if(elBajo) {
+                    elBajo.textContent = totalProblemas;
+                    if(totalProblemas > 0) elBajo.classList.add('text-danger');
+                }
+            }
+
+            // 4. Ordenes
+            const resOrdenes = await fetch('/api/ordenes/?estado=pendiente', { headers: { 'Authorization': `Bearer ${token}` } });
+            const dataOrdenes = await resOrdenes.json();
+            // Aquí está la corrección que hicimos antes:
+            const elOrdenes = document.getElementById('totalOrdenes');
+            // Cuenta si es lista o paginación
+            const cantidad = dataOrdenes.count || (dataOrdenes.results ? dataOrdenes.results.length : (Array.isArray(dataOrdenes) ? dataOrdenes.length : 0));
+            if(elOrdenes) elOrdenes.textContent = cantidad;
+
+        } catch (error) { console.error('Error cargando dashboard:', error); }
+    }
+
+    async function generarReporteVentas() {
+        const desde = document.getElementById('fechaDesdeVentas').value;
+        const hasta = document.getElementById('fechaHastaVentas').value;
+        const div = document.getElementById('resultadoVentas');
+
+        div.innerHTML = '<div class="d-flex h-100 align-items-center justify-content-center"><div class="spinner-border text-primary spinner-sm"></div></div>';
+
+        try {
+            const res = await fetch(`/api/ventas/?fecha_desde=${desde}&fecha_hasta=${hasta}`, { 
+                headers: { 'Authorization': `Bearer ${token}` } 
+            });
+            const data = await res.json();
+            const ventas = data.results || data;
+
+            if (ventas.length === 0) {
+                div.innerHTML = '<div class="d-flex h-100 align-items-center justify-content-center text-muted small">No hay datos</div>';
+                return;
+            }
+
+            let html = `
+                <table class="table table-sm table-hover mb-0 small" id="tabla-ventas-resultado">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Sucursal</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            let totalPeriodo = 0;
+            ventas.forEach(v => {
+                totalPeriodo += parseFloat(v.total);
+                html += `
+                    <tr>
+                        <td>${new Date(v.creado_en).toLocaleDateString('es-CL')}</td>
+                        <td class="text-truncate" style="max-width: 120px;">${v.nombre_sucursal}</td>
+                        <td class="text-end fw-bold">$${parseFloat(v.total).toLocaleString('es-CL')}</td>
+                    </tr>
+                `;
+            });
+
+            // --- AQUÍ AGREGAMOS EL TOTAL AL FINAL DE LA TABLA ---
+            html += `
+                    </tbody>
+                    <tfoot class="table-light sticky-bottom border-top">
+                        <tr>
+                            <td colspan="2" class="text-end fw-bold text-secondary">TOTAL PERÍODO:</td>
+                            <td class="text-end fw-bold text-primary fs-6">$${totalPeriodo.toLocaleString('es-CL')}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            `;
+            // -----------------------------------------------------
+
+            div.innerHTML = html;
+
+        } catch (error) { div.innerHTML = 'Error'; }
+    }
+
+    async function generarReporteStock() {
+        const sucursalId = document.getElementById('sucursalStock').value;
+        const div = document.getElementById('resultadoStock');
+        div.innerHTML = '<div class="d-flex h-100 align-items-center justify-content-center"><div class="spinner-border text-success spinner-sm"></div></div>';
+
+        let url = '/api/inventario/';
+        if (sucursalId) url += `?sucursal=${sucursalId}`;
+
+        try {
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            const items = await res.json();
+            const lista = items.results || items;
+
+            if (lista.length === 0) {
+                div.innerHTML = '<div class="d-flex h-100 align-items-center justify-content-center text-muted small">No hay datos</div>';
+                return;
+            }
+
+            let html = `
+                <table class="table table-sm table-striped mb-0 small" id="tabla-stock-resultado">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>Producto</th>
+                            <th class="text-center">Cant.</th>
+                            <th class="text-center">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            lista.forEach(i => {
+                let badgeClass = 'bg-success-subtle text-success';
+                let texto = 'OK';
+                if (i.stock === 0) { badgeClass = 'bg-danger-subtle text-danger'; texto = 'AGOTADO'; }
+                else if (i.stock <= i.punto_reorden) { badgeClass = 'bg-warning-subtle text-warning'; texto = 'BAJO'; }
+
+                // Manejo seguro de nombres
+                const nomProd = i.nombre_producto || `Prod ${i.producto}`;
+
+                html += `
+                    <tr>
+                        <td class="text-truncate" style="max-width: 150px;" title="${nomProd}">${nomProd}</td>
+                        <td class="text-center fw-bold">${i.stock}</td>
+                        <td class="text-center"><span class="badge ${badgeClass} border border-0">${texto}</span></td>
+                    </tr>
+                `;
+            });
+            html += '</tbody></table>';
+            div.innerHTML = html;
+
+        } catch (error) { div.innerHTML = 'Error'; }
+    }
+
+    function exportarTablaCSV(tableId, filename) {
+        const table = document.getElementById(tableId);
+        if (!table) return alert("Genere el reporte primero.");
+        
+        let csv = [];
+        const rows = table.querySelectorAll("tr");
+        for (let i = 0; i < rows.length; i++) {
+            let row = [], cols = rows[i].querySelectorAll("td, th");
+            for (let j = 0; j < cols.length; j++) row.push('"' + cols[j].innerText + '"');
+            csv.push(row.join(","));
+        }
+        const csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
+        const link = document.createElement("a");
+        link.download = filename;
+        link.href = window.URL.createObjectURL(csvFile);
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+    }
+</script>
+{% endblock %}

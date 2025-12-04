@@ -1,0 +1,447 @@
+{% extends 'base.html' %}
+
+{% block title %}Punto de Venta - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="row g-4 h-100">
+    <div class="col-lg-8 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold text-dark mb-0"><i class="bi bi-grid-3x3-gap-fill me-2 text-primary"></i>Catálogo</h4>
+            <div class="input-group shadow-sm" style="max-width: 350px;">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="buscador" class="form-control border-start-0 ps-0" placeholder="Buscar por nombre o SKU (F2)">
+            </div>
+        </div>
+
+        <div class="flex-grow-1 bg-light rounded-3 p-3 border overflow-auto" style="height: 75vh; min-height: 500px;">
+            <div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3" id="grid-productos">
+                <div class="col-12 text-center py-5 mt-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-3 text-muted fw-bold small">Cargando inventario...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow h-100 d-flex flex-column">
+            <div class="card-header bg-primary text-white py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-cart3 me-2"></i>Ticket de Venta</h5>
+                    <span class="badge bg-white text-primary" id="cart-count-badge">0 items</span>
+                </div>
+            </div>
+
+            <div class="card-body p-0 flex-grow-1 overflow-auto bg-white" style="max-height: 45vh;">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light sticky-top small">
+                            <tr>
+                                <th class="ps-3">Producto</th>
+                                <th class="text-center" style="width: 80px;">Cant.</th>
+                                <th class="text-end pe-3">Total</th>
+                                <th style="width: 30px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-carrito"></tbody>
+                    </table>
+                </div>
+                
+                <div id="msg-vacio" class="text-center py-5 text-muted">
+                    <i class="bi bi-basket3 display-4 opacity-25"></i>
+                    <p class="mt-2 small">El carrito está vacío</p>
+                </div>
+            </div>
+
+            <div class="card-footer bg-light border-top p-3">
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label x-small fw-bold text-uppercase text-muted">Sucursal</label>
+                        <select class="form-select form-select-sm" id="select-sucursal"></select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label x-small fw-bold text-uppercase text-muted">Pago</label>
+                        <select class="form-select form-select-sm" id="metodo-pago">
+                            <option value="efectivo">💵 Efectivo</option>
+                            <option value="debito">💳 Débito</option>
+                            <option value="credito">💳 Crédito</option>
+                            <option value="transferencia">🏦 Transferencia</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3 p-3 border mb-3 d-flex justify-content-between align-items-center shadow-sm">
+                    <span class="text-uppercase fw-bold text-muted small">Total a Pagar</span>
+                    <h2 class="mb-0 fw-bold text-success font-monospace" id="total-venta">$0</h2>
+                </div>
+
+                <button class="btn btn-success w-100 py-3 fw-bold shadow-sm btn-lg" onclick="procesarVenta()">
+                    <i class="bi bi-check-circle-fill me-2"></i> CONFIRMAR VENTA
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .x-small { font-size: 0.7rem; }
+    .font-monospace { font-family: monospace; letter-spacing: -0.5px; }
+    
+    .producto-card {
+        cursor: pointer;
+        transition: transform 0.2s, border-color 0.2s;
+        border: 1px solid transparent;
+    }
+    .producto-card:hover {
+        transform: translateY(-3px);
+        border-color: #0d6efd !important;
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    }
+    
+    .card-img-top {
+        height: 120px;
+        object-fit: contain;
+        padding: 10px;
+        background-color: white; /* Ensure image background is white */
+    }
+    .card-img-placeholder {
+        height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f8f9fa;
+        color: #adb5bd;
+        font-size: 2rem;
+    }
+    
+    /* Scrollbars bonitos para el panel POS */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #aaa; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Variables globales
+    let carrito = [];
+    let productosGlobal = [];
+    let inventarioGlobal = {}; // Nuevo caché: { producto_id: stock_disponible }
+    let sucursalActiva = null; 
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        document.getElementById('buscador').focus();
+        
+        await cargarSucursales();
+        
+        // Asignar listener de cambio al selector de sucursales
+        document.getElementById('select-sucursal').addEventListener('change', actualizarInventarioGeneral);
+
+        await cargarProductos(); // Carga productos, la actualización de stock se hace en el listener
+        
+        // Buscador
+        document.getElementById('buscador').addEventListener('input', (e) => {
+            const texto = e.target.value.toLowerCase();
+            const filtrados = productosGlobal.filter(p => 
+                p.nombre.toLowerCase().includes(texto) || 
+                p.sku.toLowerCase().includes(texto)
+            );
+            renderizarProductos(filtrados);
+        });
+    });
+
+    // --- Lógica de Stock e Inventario ---
+
+    async function actualizarInventarioGeneral() {
+        const token = localStorage.getItem('access_token');
+        sucursalActiva = document.getElementById('select-sucursal').value;
+        inventarioGlobal = {}; // Limpiar el caché anterior
+
+        if (!sucursalActiva) {
+            renderizarProductos(productosGlobal); 
+            return;
+        }
+
+        try {
+            // Fetch específico para el inventario de la sucursal activa
+            const res = await fetch(`/api/inventario/?sucursal=${sucursalActiva}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            
+            if (!res.ok) throw new Error('Error al cargar inventario.');
+
+            const data = await res.json();
+            const listaInventario = data.results || data;
+
+            // Llenar caché: Mapear producto_id a stock
+            listaInventario.forEach(item => {
+                inventarioGlobal[item.producto] = item.stock;
+            });
+            
+            // Forzar a renderizar el catálogo de nuevo con la info de stock actualizada
+            renderizarProductos(productosGlobal); 
+            actualizarVistaCarrito(); // Refrescar carrito para validar stock
+        } catch(e) { 
+            console.error("Error cargando inventario específico:", e);
+        }
+    }
+
+    async function cargarSucursales() {
+        const token = localStorage.getItem('access_token');
+        try {
+            const res = await fetch('/api/sucursales/', { headers: { 'Authorization': `Bearer ${token}` }});
+            const sucursales = await res.json();
+            const select = document.getElementById('select-sucursal');
+            
+            const lista = sucursales.results || sucursales;
+            select.innerHTML = '';
+            
+            if(lista.length > 0) {
+                lista.forEach(s => {
+                    select.innerHTML += `<option value="${s.id}">${s.nombre}</option>`;
+                });
+                // Si hay sucursales, disparamos la carga de inventario para la primera
+                actualizarInventarioGeneral(); 
+            } else {
+                 select.innerHTML = '<option value="">Sin sucursales</option>';
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    async function cargarProductos() {
+        const token = localStorage.getItem('access_token');
+        const grid = document.getElementById('grid-productos');
+        
+        try {
+            const res = await fetch('/api/productos/', { headers: { 'Authorization': `Bearer ${token}` }});
+            const data = await res.json();
+            productosGlobal = data.results || data;
+            // La renderización se hace al final de actualizarInventarioGeneral
+        } catch (e) {
+            console.error(e);
+            grid.innerHTML = '<div class="col-12 text-center text-danger py-5">Error al cargar inventario.</div>';
+        }
+    }
+
+    // --- Renderización del Catálogo (Ahora incluye Stock) ---
+    function renderizarProductos(lista) {
+        const grid = document.getElementById('grid-productos');
+        grid.innerHTML = '';
+        
+        if (lista.length === 0) {
+            grid.innerHTML = `
+                <div class="col-12 text-center py-5 text-muted">
+                    <i class="bi bi-search display-4 opacity-25"></i>
+                    <p class="mt-2">No se encontraron productos.</p>
+                </div>`;
+            return;
+        }
+
+        lista.forEach(p => {
+            const stockActual = inventarioGlobal[p.id] !== undefined ? inventarioGlobal[p.id] : 0;
+            const cantidadEnCarrito = carrito.find(i => i.id === p.id)?.cantidad || 0;
+            const stockDespuesCarrito = stockActual - cantidadEnCarrito;
+
+            // Estilo según stock
+            let badgeClass = 'bg-primary';
+            if (stockActual === 0) badgeClass = 'bg-danger';
+            else if (stockActual > 0 && stockActual < 10) badgeClass = 'bg-warning text-dark';
+            
+            // Lógica de Imagen
+            let imageHtml = p.imagen 
+                ? `<img src="${p.imagen}" class="card-img-top" alt="${p.nombre}">` 
+                : `<div class="card-img-placeholder"><i class="bi bi-box-seam"></i></div>`;
+
+            // Mensaje de Stock en la tarjeta
+            let stockMsg = '';
+            if (stockActual === 0) {
+                stockMsg = `<span class="fw-bold text-danger">AGOTADO</span>`;
+            } else if (stockDespuesCarrito <= 0 && stockActual > 0) {
+                 stockMsg = `<span class="fw-bold text-danger">MÁXIMO EN CARRITO</span>`;
+            } else {
+                stockMsg = `<span class="fw-bold text-success">Stock: ${stockActual}</span>`;
+            }
+
+            grid.innerHTML += `
+                <div class="col">
+                    <div class="card h-100 shadow-sm producto-card border-0 bg-white" onclick="agregarAlCarrito(${p.id})">
+                        <div class="position-relative">
+                            <span class="badge ${badgeClass} position-absolute top-0 end-0 m-2 shadow-sm" style="font-size: 0.6rem;">${p.categoria.toUpperCase()}</span>
+                            ${imageHtml}
+                        </div>
+                        <div class="card-body p-2 text-center">
+                            <h6 class="card-title text-truncate small fw-bold mb-1" title="${p.nombre}">${p.nombre}</h6>
+                            <p class="text-muted x-small text-truncate mb-2">${p.sku}</p>
+                            <h5 class="text-primary fw-bold mb-0 font-monospace">$${parseInt(p.precio).toLocaleString('es-CL')}</h5>
+                            <div class="mt-2">${stockMsg}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // --- LÓGICA DEL CARRITO (Actualizada para STOCK) ---
+    function agregarAlCarrito(idProducto) {
+        const producto = productosGlobal.find(p => p.id === idProducto);
+        if (!producto) return;
+        
+        const stockActual = inventarioGlobal[idProducto] || 0;
+        const itemExistente = carrito.find(item => item.id === idProducto);
+        const cantidadEnCarrito = itemExistente ? itemExistente.cantidad : 0;
+        
+        // Bloquear si se excede el stock
+        if (stockActual <= cantidadEnCarrito) {
+            alert(`Stock insuficiente. Solo quedan ${stockActual} unidades.`);
+            return;
+        }
+
+        if (itemExistente) {
+            itemExistente.cantidad++;
+        } else {
+            carrito.push({ ...producto, cantidad: 1 });
+        }
+        actualizarVistaCarrito();
+        renderizarProductos(productosGlobal); // Refrescar grid para actualizar badges/mensajes
+    }
+
+    function actualizarVistaCarrito() {
+        const tbody = document.getElementById('tabla-carrito');
+        const msgVacio = document.getElementById('msg-vacio');
+        const totalEl = document.getElementById('total-venta');
+        const badge = document.getElementById('cart-count-badge');
+        
+        tbody.innerHTML = '';
+        let total = 0;
+        let countItems = 0;
+
+        if (carrito.length === 0) {
+            msgVacio.style.display = 'block';
+        } else {
+            msgVacio.style.display = 'none';
+            
+            carrito.forEach((item, index) => {
+                const subtotal = item.precio * item.cantidad;
+                total += subtotal;
+                countItems += item.cantidad;
+
+                const stockDisponible = inventarioGlobal[item.id] || 0;
+                const isOverstock = item.cantidad > stockDisponible;
+                const rowClass = isOverstock ? 'table-danger' : '';
+
+                tbody.innerHTML += `
+                    <tr class="${rowClass}">
+                        <td class="ps-3">
+                            <div class="text-truncate small fw-bold ${isOverstock ? 'text-danger' : ''}" style="max-width: 120px;">${item.nombre}</div>
+                            <div class="text-muted x-small">$${item.precio.toLocaleString()} c/u</div>
+                            ${isOverstock ? `<small class="text-danger fw-bold">MAX: ${stockDisponible}</small>` : ''}
+                        </td>
+                        <td class="text-center">
+                            <div class="input-group input-group-sm">
+                                <input type="number" min="1" value="${item.cantidad}" 
+                                    onchange="cambiarCantidad(${index}, this.value)" 
+                                    class="form-control text-center px-1 fw-bold ${isOverstock ? 'border-danger' : ''}">
+                            </div>
+                        </td>
+                        <td class="text-end pe-3 small fw-bold text-dark font-monospace">$${subtotal.toLocaleString('es-CL')}</td>
+                        <td>
+                            <button class="btn btn-link text-danger p-0 btn-sm" onclick="eliminarItem(${index})"><i class="bi bi-x-lg"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+        totalEl.textContent = '$' + total.toLocaleString('es-CL');
+        badge.textContent = countItems + ' items';
+    }
+
+    function cambiarCantidad(index, valor) {
+        const stockDisponible = inventarioGlobal[carrito[index].id] || 0;
+        let newQty = parseInt(valor);
+        
+        if (isNaN(newQty) || newQty < 1) newQty = 1;
+        
+        if (newQty > stockDisponible) {
+            alert(`Stock insuficiente. Máximo ${stockDisponible}`);
+            newQty = stockDisponible;
+        }
+        
+        carrito[index].cantidad = newQty;
+        actualizarVistaCarrito();
+        renderizarProductos(productosGlobal);
+    }
+
+    function eliminarItem(index) {
+        carrito.splice(index, 1);
+        actualizarVistaCarrito();
+        renderizarProductos(productosGlobal);
+    }
+
+    // --- PROCESAR VENTA ---
+    async function procesarVenta() {
+        const token = localStorage.getItem('access_token');
+        
+        if (carrito.length === 0) return alert('El carrito está vacío');
+        
+        const sucursalId = document.getElementById('select-sucursal').value;
+        if (!sucursalId) return alert('Error: Seleccione una sucursal.');
+
+        // Validación final de stock (CRÍTICO)
+        for (const item of carrito) {
+            const stockActual = inventarioGlobal[item.id] || 0;
+            if (item.cantidad > stockActual) {
+                alert(`Error: El producto "${item.nombre}" supera el stock disponible (${stockActual}).`);
+                return;
+            }
+        }
+        
+        const btn = document.querySelector('button[onclick="procesarVenta()"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando...';
+
+        const payload = {
+            sucursal: sucursalId,
+            metodo_pago: document.getElementById('metodo-pago').value,
+            items: carrito.map(item => ({
+                producto: item.id,
+                cantidad: item.cantidad
+            }))
+        };
+
+        try {
+            const res = await fetch('/api/ventas/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                alert('✅ ¡Venta Exitosa! Folio: #' + data.id);
+                carrito = [];
+                actualizarVistaCarrito();
+                // Actualizar inventario local después de la venta
+                await actualizarInventarioGeneral(); 
+                window.open(`/ventas/recibo/?id=${data.id}`, '_blank');
+            } else {
+                let errorMsg = 'Error al procesar la venta.\n';
+                if (data.items) errorMsg += 'Revise el stock disponible.'; 
+                else if (Array.isArray(data)) errorMsg += data[0];
+                else errorMsg += JSON.stringify(data);
+                
+                alert(errorMsg);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error de conexión');
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}Proveedores - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h6 class="text-uppercase text-muted small fw-bold ls-1 mb-1">Gestión</h6>
+        <h2 class="fw-bold text-dark"><i class="bi bi-buildings me-2"></i>Directorio de Proveedores</h2>
+    </div>
+    
+    <div class="d-flex gap-2">
+        <div class="input-group shadow-sm" style="max-width: 250px;">
+            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" class="form-control border-start-0 ps-0" placeholder="Buscar empresa...">
+        </div>
+        
+        <a href="/proveedores/create/" id="btn-crear" class="btn btn-success shadow-sm px-4 text-nowrap">
+            <i class="bi bi-plus-lg me-2"></i>Registrar
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light border-bottom">
+                    <tr>
+                        <th class="ps-4 text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Empresa</th>
+                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Contacto Principal</th>
+                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Canales</th>
+                        <th class="text-end pe-4 text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-proveedores">
+                    <tr>
+                        <td colspan="4" class="text-center py-5">
+                            <div class="spinner-border text-success spinner-sm" role="status"></div>
+                            <p class="mt-2 text-muted small fw-bold">Cargando directorio...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer bg-white py-3 border-top-0">
+        <small class="text-muted">Gestión de cadena de suministro.</small>
+    </div>
+</div>
+
+<style>
+    .text-xxs { font-size: 0.75rem; }
+    .ls-1 { letter-spacing: 1px; }
+    .font-weight-bolder { font-weight: 700 !important; }
+    
+    .avatar-company {
+        width: 45px;
+        height: 45px;
+        background-color: #f0f2f5;
+        color: #198754;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // 1. Obtener Token Localmente (Seguridad técnica)
+        const token = localStorage.getItem('access_token');
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        const tabla = document.getElementById('tabla-proveedores');
+
+        // Ocultar botón si es vendedor
+        if (userInfo.rol === 'vendedor') {
+            const btn = document.getElementById('btn-crear');
+            if(btn) btn.style.display = 'none';
+        }
+
+        try {
+            const response = await fetch('/api/proveedores/', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) throw new Error('Error al cargar');
+            
+            const data = await response.json();
+            const proveedores = data.results || data; // Soporte paginación
+
+            tabla.innerHTML = '';
+            
+            if(proveedores.length === 0) {
+                tabla.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center py-5">
+                            <div class="text-muted opacity-50 mb-2"><i class="bi bi-building-slash display-4"></i></div>
+                            <h6 class="text-muted">No hay proveedores registrados</h6>
+                            <p class="small text-muted">Agrega uno para comenzar a comprar stock.</p>
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            proveedores.forEach(p => {
+                const fila = `
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-company me-3">
+                                    <i class="bi bi-building"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 text-sm fw-bold text-dark">${p.nombre}</h6>
+                                    <span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.7rem;">
+                                        RUT: ${p.rut}
+                                    </span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="icon-circle bg-light text-dark me-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                                    <i class="bi bi-person-fill small"></i>
+                                </div>
+                                <span class="text-sm font-weight-bold text-secondary">${p.contacto}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column gap-1">
+                                <div class="d-flex align-items-center text-sm">
+                                    <i class="bi bi-telephone me-2 text-success"></i>
+                                    <span>${p.telefono}</span>
+                                </div>
+                                <div class="d-flex align-items-center text-sm">
+                                    <i class="bi bi-envelope me-2 text-primary"></i>
+                                    <a href="mailto:${p.email}" class="text-decoration-none text-secondary">${p.email}</a>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="/proveedores/detalle/?id=${p.id}" class="btn btn-sm btn-outline-success shadow-sm">
+                                Ver Ficha <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </td>
+                    </tr>
+                `;
+                tabla.innerHTML += fila;
+            });
+
+        } catch (error) {
+            console.error(error);
+            tabla.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-4">Error de conexión.</td></tr>';
+        }
+    });
+</script>
+{% endblock %}

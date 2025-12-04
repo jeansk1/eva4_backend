@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}Nuevo Proveedor - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h6 class="text-uppercase text-muted small fw-bold ls-1">Proveedores</h6>
+                <h2 class="fw-bold text-dark"><i class="bi bi-truck me-2"></i>Registrar Proveedor</h2>
+            </div>
+            <a href="/proveedores/" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-x-lg me-1"></i> Cancelar
+            </a>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form id="form-create-proveedor">
+                    
+                    <h6 class="text-uppercase text-muted small fw-bold mb-3 border-bottom pb-2">Datos de la Empresa</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label for="rut" class="form-label fw-bold">RUT Empresa</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-credit-card-2-front"></i></span>
+                                <input type="text" class="form-control" id="rut" required placeholder="12345678-9">
+                            </div>
+                            <div class="form-text small">Formato con guion.</div>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="nombre" class="form-label fw-bold">Razón Social / Nombre</label>
+                            <input type="text" class="form-control" id="nombre" required placeholder="Ej: Distribuidora del Sur SpA">
+                        </div>
+                    </div>
+
+                    <h6 class="text-uppercase text-muted small fw-bold mb-3 border-bottom pb-2">Contacto Comercial</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="contacto" class="form-label fw-bold">Nombre de Contacto</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
+                                <input type="text" class="form-control" id="contacto" required placeholder="Ej: Juan Pérez">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="telefono" class="form-label fw-bold">Teléfono</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-telephone"></i></span>
+                                <input type="tel" class="form-control" id="telefono" required placeholder="+569...">
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label for="email" class="form-label fw-bold">Correo Electrónico</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+                                <input type="email" class="form-control" id="email" required placeholder="contacto@empresa.cl">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-light p-3 rounded-3 mb-4">
+                        <h6 class="text-uppercase text-muted small fw-bold mb-2">Ubicación</h6>
+                        <div class="mb-0">
+                            <label for="direccion" class="form-label fw-bold">Dirección Comercial</label>
+                            <textarea class="form-control" id="direccion" rows="2" required placeholder="Calle, Número, Comuna..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end pt-3 border-top">
+                        <button type="submit" class="btn btn-success px-5 shadow-sm btn-lg">
+                            <i class="bi bi-check-lg me-2"></i> Guardar Proveedor
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('form-create-proveedor').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // TOKEN SEGURO (Local)
+        const token = localStorage.getItem('access_token');
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+
+        if (!userInfo.compania_id && userInfo.rol !== 'super_admin') {
+            alert('Error: No se ha identificado la compañía del usuario.');
+            return;
+        }
+
+        const payload = {
+            rut: document.getElementById('rut').value,
+            nombre: document.getElementById('nombre').value,
+            contacto: document.getElementById('contacto').value,
+            telefono: document.getElementById('telefono').value,
+            email: document.getElementById('email').value,
+            direccion: document.getElementById('direccion').value,
+            compania: userInfo.compania_id 
+        };
+
+        // Feedback visual
+        const btn = document.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
+
+        try {
+            const response = await fetch('/api/proveedores/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                alert('✅ Proveedor registrado exitosamente');
+                window.location.href = '/proveedores/';
+            } else {
+                const data = await response.json();
+                let errorMsg = 'Error al registrar:\n';
+                if (data.rut) errorMsg += '- RUT inválido o duplicado.\n';
+                else if (data.email) errorMsg += '- Email inválido.\n';
+                else errorMsg += JSON.stringify(data);
+                
+                alert(errorMsg);
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error de conexión.');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    });
+</script>
+{% endblock %}

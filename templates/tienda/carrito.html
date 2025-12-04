@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrito de Compras - TemucoSoft</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
+        .navbar-brand { font-weight: 700; color: #0d6efd !important; }
+        .checkout-sidebar { position: sticky; top: 20px; }
+        .alert-stock-error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom mb-5">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/tienda/">
+                <i class="bi bi-box-seam-fill me-2"></i>TemucoSoft Store
+            </a>
+            <div class="ms-auto">
+                <a href="/tienda/" class="text-decoration-none text-secondary small fw-bold">
+                    <i class="bi bi-arrow-left me-1"></i> Volver a la tienda
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        <div class="row g-5">
+            <div class="col-lg-8">
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0 fw-bold">Tu Carrito <span class="badge bg-secondary rounded-pill ms-2" id="cart-count-badge" style="font-size: 0.8rem;">0</span></h4>
+                </div>
+
+                <div class="card border-0 shadow-sm mb-5 overflow-hidden">
+                    <div class="card-body p-0">
+                        <div id="cart-items-container">
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status"></div>
+                                <p class="mt-3 text-muted small">Cargando tus productos...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="checkout-form-section">
+                    <h4 class="mb-3 fw-bold">Datos de Despacho</h4>
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body p-4">
+                            <form id="order-form" class="needs-validation" novalidate>
+                                <div class="row g-3">
+                                    <div class="col-sm-6">
+                                        <label class="form-label small fw-bold text-uppercase text-secondary">Nombre Completo</label>
+                                        <input type="text" class="form-control" id="cliente_nombre" required placeholder="Ej: Juan Pérez">
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="form-label small fw-bold text-uppercase text-secondary">Email</label>
+                                        <input type="email" class="form-control" id="cliente_email" required placeholder="correo@ejemplo.com">
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="form-label small fw-bold text-uppercase text-secondary">Teléfono</label>
+                                        <input type="tel" class="form-control" id="cliente_telefono" placeholder="+56 9 ...">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold text-uppercase text-secondary">Dirección de Envío</label>
+                                        <textarea class="form-control" id="cliente_direccion" rows="2" required placeholder="Calle, Número, Depto, Comuna"></textarea>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="checkout-sidebar">
+                    <div class="card border-0 shadow-sm bg-white">
+                        <div class="card-header bg-light py-3 border-bottom">
+                            <h5 class="mb-0 fw-bold text-dark">Resumen del Pedido</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            
+                            <div id="stock-warning" class="alert alert-stock-error d-none mb-3 py-2 small fw-bold">
+                                <i class="bi bi-x-octagon-fill me-1"></i> Stock Insuficiente
+                            </div>
+
+                            <ul class="list-unstyled mb-4">
+                                <li class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Subtotal</span>
+                                    <strong id="summary-subtotal">$0</strong>
+                                </li>
+                                <li class="d-flex justify-content-between mb-3">
+                                    <span class="text-muted">Envío</span>
+                                    <span class="text-success fw-bold">Gratis</span>
+                                </li>
+                                <li class="d-flex justify-content-between border-top pt-3">
+                                    <span class="fs-5 fw-bold">Total a Pagar</span>
+                                    <span class="fs-4 fw-bold text-primary" id="summary-total">$0</span>
+                                </li>
+                            </ul>
+
+                            <button class="btn btn-success w-100 btn-lg py-3 fw-bold shadow-sm mb-3" onclick="procesarPago()" id="btn-pagar" disabled>
+                                Confirmar y Pagar
+                            </button>
+                            
+                            <div class="text-center">
+                                <button class="btn btn-link text-danger text-decoration-none btn-sm" onclick="vaciarCarrito()">
+                                    Vaciar Carrito
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const CART_KEY = 'carrito_tienda';
+        let cart = [];
+        let inventarioGlobal = {}; // Cache de stock
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Carga stock y luego el carrito para que tenga los datos al renderizar
+            cargarInventarioStock();
+            cargarCarrito(); 
+            prellenarDatosUsuario();
+        });
+
+        // --- LÓGICA DE STOCK (Igual que en el catálogo) ---
+        async function cargarInventarioStock() {
+            const token = localStorage.getItem('access_token');
+            const headers = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            
+            try {
+                // Consultar el inventario total (sin filtro de sucursal)
+                const res = await fetch('/api/inventario/', { headers }); 
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    const listaInventario = data.results || data;
+                    
+                    listaInventario.forEach(item => {
+                        const stock = parseInt(item.stock) || 0;
+                        const prodId = item.producto;
+                        // Sumamos stock de todas las sucursales
+                        inventarioGlobal[prodId] = (inventarioGlobal[prodId] || 0) + stock; 
+                    });
+                }
+            } catch(e) {
+                console.warn("No se pudo cargar el inventario de stock.");
+            }
+        }
+
+        function cargarCarrito() {
+            const stored = localStorage.getItem(CART_KEY);
+            cart = stored ? JSON.parse(stored) : [];
+            
+            // Usamos setTimeout para asegurar que el inventarioGlobal tenga tiempo de cargarse
+            setTimeout(() => {
+                renderizarItems();
+                actualizarTotales();
+                validarStockGlobal(); // Nueva validación al cargar el carrito
+            }, 500); 
+        }
+
+        function renderizarItems() {
+            const container = document.getElementById('cart-items-container');
+            const btnPagar = document.getElementById('btn-pagar');
+            
+            if (cart.length === 0) {
+                 // ... (Código de carrito vacío) ...
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                            <i class="bi bi-cart-x fs-1 text-secondary opacity-50"></i>
+                        </div>
+                        <h5 class="text-dark fw-bold">Tu carrito está vacío</h5>
+                        <p class="text-muted mb-4">Parece que aún no has agregado productos.</p>
+                        <a href="/tienda/" class="btn btn-primary px-4 rounded-pill">Explorar Tienda</a>
+                    </div>
+                `;
+                btnPagar.disabled = true;
+                document.getElementById('cart-count-badge').textContent = '0';
+                validarStockGlobal(); // Aseguramos que la alerta se oculte
+                return;
+            }
+
+            btnPagar.disabled = false;
+            document.getElementById('cart-count-badge').textContent = cart.length;
+
+            let html = '<ul class="list-group list-group-flush">';
+            let hayErrorStock = false;
+            
+            cart.forEach((item, index) => {
+                const totalItem = item.precio * item.cantidad;
+                const stockDisponible = inventarioGlobal[item.id] || 0;
+                const isOverstock = item.cantidad > stockDisponible;
+
+                if (isOverstock) hayErrorStock = true;
+
+                html += `
+                    <li class="list-group-item py-3 ${isOverstock ? 'alert-stock-error border-danger' : ''}">
+                        <div class="row align-items-center">
+                            <div class="col-md-6 mb-2 mb-md-0">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded p-2 me-3 flex-shrink-0">
+                                        <i class="bi bi-box-seam fs-4 text-secondary"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-dark">${item.nombre}</h6>
+                                        ${isOverstock 
+                                            ? `<span class="text-danger small fw-bold"><i class="bi bi-x-octagon me-1"></i> Stock MAX: ${stockDisponible}</span>` 
+                                            : `<small class="text-muted">Unitario: $${item.precio.toLocaleString()}</small>`}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <div class="input-group input-group-sm ${isOverstock ? 'border border-danger' : ''}">
+                                    <button class="btn btn-outline-secondary ${isOverstock ? 'border-danger' : ''}" type="button" onclick="updateQty(${index}, -1)">-</button>
+                                    <input type="text" class="form-control text-center bg-white ${isOverstock ? 'text-danger fw-bold' : ''}" value="${item.cantidad}" readonly>
+                                    <button class="btn btn-outline-secondary ${isOverstock ? 'border-danger' : ''}" type="button" onclick="updateQty(${index}, 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-6 text-end">
+                                <span class="fw-bold d-block">$${totalItem.toLocaleString()}</span>
+                                <small role="button" class="text-danger text-decoration-underline" style="font-size: 0.75rem;" onclick="removeItem(${index})">Eliminar</small>
+                            </div>
+                        </div>
+                    </li>
+                `;
+            });
+            html += '</ul>';
+            container.innerHTML = html;
+            validarStockGlobal(hayErrorStock);
+        }
+
+        function validarStockGlobal(hayError) {
+            const warningBox = document.getElementById('stock-warning');
+            const btnPagar = document.getElementById('btn-pagar');
+
+            if (hayError) {
+                warningBox.classList.remove('d-none');
+                btnPagar.disabled = true;
+                btnPagar.textContent = 'Stock Insuficiente';
+                btnPagar.classList.replace('btn-success', 'btn-danger');
+            } else {
+                warningBox.classList.add('d-none');
+                if (cart.length > 0) {
+                    btnPagar.disabled = false;
+                    btnPagar.textContent = 'Confirmar y Pagar';
+                    btnPagar.classList.replace('btn-danger', 'btn-success');
+                }
+            }
+        }
+
+        function actualizarTotales() {
+            const total = cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+            
+            document.getElementById('summary-subtotal').textContent = '$' + total.toLocaleString('es-CL');
+            document.getElementById('summary-total').textContent = '$' + total.toLocaleString('es-CL');
+        }
+
+        function updateQty(index, change) {
+            const stockDisponible = inventarioGlobal[cart[index].id] || 0;
+            const newQty = cart[index].cantidad + change;
+
+            if (newQty < 1) {
+                removeItem(index);
+                return;
+            }
+            if (newQty > stockDisponible) {
+                alert(`No puedes agregar más. Máximo disponible: ${stockDisponible}`);
+                return;
+            }
+
+            cart[index].cantidad = newQty;
+            guardarYRenderizar();
+        }
+
+        function removeItem(index) {
+            if(confirm('¿Eliminar producto?')) {
+                cart.splice(index, 1);
+                guardarYRenderizar();
+            }
+        }
+
+        function vaciarCarrito() {
+            if(confirm('¿Vaciar todo el carrito?')) {
+                cart = [];
+                guardarYRenderizar();
+            }
+        }
+
+        function guardarYRenderizar() {
+            localStorage.setItem(CART_KEY, JSON.stringify(cart));
+            renderizarItems();
+            actualizarTotales();
+        }
+
+        async function prellenarDatosUsuario() {
+            const token = localStorage.getItem('access_token');
+            if (!token) return;
+
+            try {
+                const res = await fetch('/api/usuarios/me/', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const user = await res.json();
+                    document.getElementById('cliente_nombre').value = user.username;
+                    document.getElementById('cliente_email').value = user.email;
+                }
+            } catch (e) { console.log('Invitado'); }
+        }
+
+        async function procesarPago() {
+            if (cart.length === 0) return;
+            
+            // Re-validación final antes de la API (por si el stock cambió)
+            validarStockGlobal(true); 
+            if (document.getElementById('btn-pagar').disabled) {
+                 alert('Por favor, ajusta la cantidad de los productos en rojo antes de pagar.');
+                 return;
+            }
+
+            // HTML5 Validation
+            const form = document.getElementById('order-form');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const btn = document.getElementById('btn-pagar');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Procesando...';
+
+            const total = cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+            
+            const payload = {
+                nombre_cliente: document.getElementById('cliente_nombre').value,
+                email_cliente: document.getElementById('cliente_email').value,
+                telefono_cliente: document.getElementById('cliente_telefono').value,
+                direccion_cliente: document.getElementById('cliente_direccion').value,
+                total: total,
+                estado: 'pendiente',
+                items: cart.map(i => ({
+                    producto: i.id,
+                    cantidad: i.cantidad,
+                    precio_unitario: i.precio
+                }))
+            };
+
+            try {
+                const res = await fetch('/api/ordenes/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.removeItem(CART_KEY);
+                    window.location.href = `/tienda/confirmacion/?id=${data.id}`;
+                } else {
+                    const error = await res.json();
+                    alert('Error: ' + JSON.stringify(error));
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error de conexión');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}Ficha de Usuario - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="/usuarios/" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm">
+            <i class="bi bi-arrow-left me-1"></i> Volver a Usuarios
+        </a>
+    </div>
+
+    <div id="loading-spinner" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 fw-bold text-dark">Cargando perfil...</p>
+    </div>
+
+    <div id="user-content" class="d-none animate-fade-in">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card border-0 shadow-lg overflow-hidden rounded-4">
+                    <div class="card-body p-0">
+                        
+                        <div class="bg-primary p-5 text-center text-white position-relative" style="background: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%);">
+                            <div class="avatar-circle bg-white text-primary shadow mx-auto mb-3 border border-4 border-white bg-opacity-10">
+                                <i class="bi bi-person-circle fs-1"></i>
+                            </div>
+                            
+                            <h3 class="fw-bold mb-1 text-white" id="user-username" style="text-shadow: 0 2px 4px rgba(0,0,0,0.2);">Cargando...</h3>
+                            
+                            <p class="mb-3 opacity-75 fw-medium" id="user-email-header">-</p>
+
+                            <span class="badge bg-white text-primary fw-bold px-3 py-2 rounded-pill shadow-sm" id="user-rol">-</span>
+                            
+                            <div class="mt-3">
+                                <span id="badge-status" class="badge bg-success border border-white border-2 rounded-pill px-3">-</span>
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-white">
+                            <div class="vstack gap-3">
+                                
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-3">
+                                    <div class="d-flex align-items-center text-secondary">
+                                        <i class="bi bi-building fs-5 me-3 text-primary"></i>
+                                        <span class="fw-bold small text-uppercase text-primary">ORGANIZACIÓN</span>
+                                    </div>
+                                    <span class="fw-bold text-dark fs-6 text-end text-truncate" style="max-width: 150px;" id="user-company">-</span>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-3">
+                                    <div class="d-flex align-items-center text-secondary">
+                                        <i class="bi bi-credit-card-2-front fs-5 me-3"></i>
+                                        <span class="fw-bold small text-uppercase">RUT</span>
+                                    </div>
+                                    <span class="fw-bold text-dark fs-6" id="user-rut">-</span>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-3">
+                                    <div class="d-flex align-items-center text-secondary">
+                                        <i class="bi bi-telephone fs-5 me-3"></i>
+                                        <span class="fw-bold small text-uppercase">Teléfono</span>
+                                    </div>
+                                    <span class="fw-bold text-dark fs-6" id="user-phone">-</span>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center pt-1">
+                                    <div class="d-flex align-items-center text-secondary">
+                                        <i class="bi bi-calendar-check fs-5 me-3"></i>
+                                        <span class="fw-bold small text-uppercase">Registro</span>
+                                    </div>
+                                    <span class="fw-bold text-dark fs-6" id="user-date">-</span>
+                                </div>
+
+                            </div>
+
+                            <div class="d-grid mt-5">
+                                <button id="btn-eliminar" class="btn btn-outline-danger fw-bold py-2" onclick="eliminarUsuario()">
+                                    <i class="bi bi-trash me-2"></i> Eliminar Usuario
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="error-msg" class="alert alert-danger d-none text-center mt-4 shadow-sm border-0">
+        <i class="bi bi-exclamation-circle-fill me-2"></i> No se pudo cargar la información del usuario.
+    </div>
+</div>
+
+<style>
+    .avatar-circle {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const pathParts = window.location.pathname.split('/');
+    const userId = pathParts.find(p => !isNaN(p) && p !== '');
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!userId) {
+            alert("ID de usuario no encontrado.");
+            window.location.href = '/usuarios/';
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const res = await fetch(`/api/usuarios/${userId}/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!res.ok) throw new Error('Error al cargar');
+            
+            const u = await res.json();
+
+            // Renderizar Header
+            document.getElementById('user-username').textContent = u.username;
+            document.getElementById('user-email-header').textContent = u.email;
+            document.getElementById('user-rol').textContent = formatRole(u.rol);
+            
+            // Renderizar Lista
+            document.getElementById('user-rut').textContent = u.rut || 'No informado';
+            document.getElementById('user-phone').textContent = u.telefono || 'No informado';
+            
+            // Compañía
+            let companyName = 'N/A (Global)';
+            if (u.compania_nombre) { // Usamos el campo con el nombre de la compañía (que agregamos al serializer)
+                companyName = u.compania_nombre;
+            } else if (u.compania) {
+                 companyName = `#${u.compania}`; // Fallback a ID si el nombre falla
+            }
+            document.getElementById('user-company').textContent = companyName;
+
+            // Status Badge
+            const badge = document.getElementById('badge-status');
+            if (u.is_active) {
+                badge.className = 'badge bg-success border border-white border-2 rounded-pill px-3 shadow-sm';
+                badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Activo';
+            } else {
+                badge.className = 'badge bg-danger border border-white border-2 rounded-pill px-3 shadow-sm';
+                badge.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i> Inactivo';
+            }
+
+            document.getElementById('user-date').textContent = u.creado_en ? new Date(u.creado_en).toLocaleDateString('es-CL') : '-';
+
+            document.getElementById('loading-spinner').classList.add('d-none');
+            document.getElementById('user-content').classList.remove('d-none');
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('loading-spinner').classList.add('d-none');
+            document.getElementById('error-msg').classList.remove('d-none');
+        }
+    });
+
+    async function eliminarUsuario() {
+        if(!confirm('¿Está seguro de eliminar este usuario? Esta acción es irreversible.')) return;
+        
+        const token = localStorage.getItem('access_token');
+        try {
+            const res = await fetch(`/api/usuarios/${userId}/`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                alert('Usuario eliminado correctamente.');
+                window.location.href = '/usuarios/';
+            } else {
+                alert('Error al eliminar. Verifique permisos.');
+            }
+        } catch (e) {
+            alert('Error de conexión');
+        }
+    }
+
+    function formatRole(role) {
+        const map = {
+            'super_admin': 'Super Administrador',
+            'admin_cliente': 'Administrador Cliente',
+            'gerente': 'Gerente de Tienda',
+            'vendedor': 'Vendedor POS',
+            'cliente_final': 'Cliente E-commerce'
+        };
+        return map[role] || role.toUpperCase();
+    }
+</script>
+{% endblock %}

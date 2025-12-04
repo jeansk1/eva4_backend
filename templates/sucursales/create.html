@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}Nueva Sucursal - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h6 class="text-uppercase text-muted small fw-bold ls-1">Administración</h6>
+                <h2 class="fw-bold text-dark"><i class="bi bi-shop me-2"></i>Nueva Sucursal</h2>
+            </div>
+            <a href="/sucursales/" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-x-lg me-1"></i> Cancelar
+            </a>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <div class="alert alert-info border-0 d-flex align-items-center mb-4">
+                    <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+                    <div>
+                        <strong>Información Importante</strong><br>
+                        La nueva sucursal quedará habilitada inmediatamente para ventas y gestión de inventario.
+                    </div>
+                </div>
+
+                <form id="form-create-sucursal">
+                    
+                    <h6 class="text-uppercase text-muted small fw-bold mb-3 border-bottom pb-2">Datos Generales</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-8">
+                            <label for="nombre" class="form-label fw-bold">Nombre de la Sucursal</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-building"></i></span>
+                                <input type="text" class="form-control" id="nombre" required placeholder="Ej: Casa Matriz - Centro">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="telefono" class="form-label fw-bold">Teléfono</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-telephone"></i></span>
+                                <input type="tel" class="form-control" id="telefono" required placeholder="+56 45 2...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="text-uppercase text-muted small fw-bold mb-3 border-bottom pb-2">Contacto y Ubicación</h6>
+                    <div class="mb-3">
+                        <label for="email" class="form-label fw-bold">Correo Electrónico</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+                            <input type="email" class="form-control" id="email" required placeholder="sucursal.centro@empresa.com">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="direccion" class="form-label fw-bold">Dirección Física</label>
+                        <textarea class="form-control" id="direccion" rows="3" required placeholder="Calle, Número, Comuna..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end pt-3 border-top">
+                        <button type="submit" class="btn btn-primary px-5 shadow-sm btn-lg">
+                            <i class="bi bi-check-lg me-2"></i> Crear Sucursal
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        if (userInfo.rol === 'vendedor' || userInfo.rol === 'gerente') {
+            alert('⛔ Acceso restringido: No tiene permisos para crear sucursales.');
+            window.location.href = '/sucursales/';
+        }
+    });
+
+    document.getElementById('form-create-sucursal').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // TOKEN SEGURO (Local)
+        const token = localStorage.getItem('access_token');
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+
+        if (!userInfo.compania_id && userInfo.rol !== 'super_admin') {
+            alert('Error: No se ha identificado la compañía del usuario.');
+            return;
+        }
+
+        const payload = {
+            nombre: document.getElementById('nombre').value,
+            telefono: document.getElementById('telefono').value,
+            email: document.getElementById('email').value,
+            direccion: document.getElementById('direccion').value,
+            compania: userInfo.compania_id 
+        };
+
+        // Visual Feedback
+        const btn = document.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
+
+        try {
+            const response = await fetch('/api/sucursales/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                alert('✅ Sucursal creada exitosamente');
+                window.location.href = '/sucursales/';
+            } else {
+                const data = await response.json();
+                let errorMsg = 'Error al crear sucursal:\n';
+                
+                if (data.detail) errorMsg += `- ${data.detail}\n`;
+                else errorMsg += JSON.stringify(data);
+                
+                alert(errorMsg);
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error de conexión con el servidor.');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    });
+</script>
+{% endblock %}

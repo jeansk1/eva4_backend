@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+
+{% block title %}Ajuste de Inventario - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h6 class="text-uppercase text-muted small fw-bold ls-1">Inventario</h6>
+        <h2 class="fw-bold text-dark"><i class="bi bi-sliders me-2"></i>Ajuste Manual de Stock</h2>
+        <p class="text-muted mb-0">Corrección de diferencias de inventario físico.</p>
+    </div>
+    <a href="/inventario/" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Volver al Listado
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-warning-subtle text-warning-emphasis py-3 border-bottom-0">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+                    <div>
+                        <h6 class="mb-0 fw-bold">Zona de Ajuste</h6>
+                        <small>Cambios directos al stock. Uso exclusivo de administración.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-4">
+                <h6 class="text-uppercase text-muted small fw-bold mb-3">1. Seleccionar Item</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Sucursal</label>
+                        <select id="select-sucursal" class="form-select" onchange="buscarInventario()"></select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Producto</label>
+                        <select id="select-producto" class="form-select" onchange="buscarInventario()"></select>
+                    </div>
+                </div>
+
+                <hr class="text-muted opacity-25">
+
+                <div id="area-ajuste" class="d-none animate-fade-in">
+                    <h6 class="text-uppercase text-muted small fw-bold mb-3">2. Realizar Ajuste</h6>
+                    
+                    <div class="bg-light rounded-3 p-4 mb-4 border text-center">
+                        <small class="text-uppercase text-muted fw-bold">Stock Actual en Sistema</small>
+                        <h1 class="display-3 fw-bold text-dark my-2" id="display-stock">0</h1>
+                        <span class="badge bg-white text-secondary border" id="display-last-update">Actualizado: -</span>
+                    </div>
+
+                    <form id="form-ajuste" onsubmit="guardarAjuste(event)">
+                        <div class="mb-4">
+                            <label for="nuevo-stock" class="form-label fw-bold">Nuevo Stock Real (Conteo Físico)</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-white"><i class="bi bi-box-seam"></i></span>
+                                <input type="number" class="form-control" id="nuevo-stock" required min="0" placeholder="Ingrese cantidad">
+                            </div>
+                            <div class="form-text text-danger mt-2">
+                                <i class="bi bi-info-circle me-1"></i> Esta acción sobrescribirá el valor actual permanentemente.
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="button" class="btn btn-light text-muted px-4" onclick="limpiarFormulario()">Cancelar</button>
+                            <button type="submit" class="btn btn-primary px-5 btn-lg shadow-sm">
+                                <i class="bi bi-save me-2"></i> Guardar Ajuste
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="msg-error" class="alert alert-info border-0 d-flex align-items-center d-none mt-3">
+                    <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+                    <div>
+                        <strong>Registro no encontrado</strong>
+                        <br>Este producto nunca ha tenido stock en esta sucursal. Realice una <strong>Compra</strong> primero.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    .bg-warning-subtle { background-color: #fff3cd; }
+    .text-warning-emphasis { color: #664d03; }
+    
+    .animate-fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let inventarioIdActual = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await cargarSelectores();
+    });
+
+    async function cargarSelectores() {
+        const token = localStorage.getItem('access_token');
+        try {
+            // Load Branches
+            const resSuc = await fetch('/api/sucursales/', { headers: { 'Authorization': `Bearer ${token}` }});
+            const sucursales = await resSuc.json();
+            const selSuc = document.getElementById('select-sucursal');
+            selSuc.innerHTML = '<option value="">Seleccione Sucursal...</option>';
+            
+            const listaSucursales = sucursales.results || sucursales;
+            listaSucursales.forEach(s => selSuc.innerHTML += `<option value="${s.id}">${s.nombre}</option>`);
+
+            // Load Products
+            const resProd = await fetch('/api/productos/', { headers: { 'Authorization': `Bearer ${token}` }});
+            const productos = await resProd.json();
+            const listaProductos = productos.results || productos;
+            
+            const selProd = document.getElementById('select-producto');
+            selProd.innerHTML = '<option value="">Seleccione Producto...</option>';
+            listaProductos.forEach(p => selProd.innerHTML += `<option value="${p.id}">${p.sku} - ${p.nombre}</option>`);
+
+        } catch (error) {
+            console.error('Error cargando datos:', error);
+        }
+    }
+
+    async function buscarInventario() {
+        const token = localStorage.getItem('access_token');
+        const sucursalId = document.getElementById('select-sucursal').value;
+        const productoId = document.getElementById('select-producto').value;
+        const areaAjuste = document.getElementById('area-ajuste');
+        const msgError = document.getElementById('msg-error');
+
+        areaAjuste.classList.add('d-none');
+        msgError.classList.add('d-none');
+
+        if (!sucursalId || !productoId) return;
+
+        try {
+            const res = await fetch(`/api/inventario/?sucursal=${sucursalId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            const items = data.results || data;
+
+            const item = items.find(i => i.producto == productoId);
+
+            if (item) {
+                inventarioIdActual = item.id;
+                document.getElementById('display-stock').textContent = item.stock;
+                
+                const fecha = new Date(item.ultima_actualizacion);
+                document.getElementById('display-last-update').textContent = 'Actualizado: ' + fecha.toLocaleDateString() + ' ' + fecha.toLocaleTimeString();
+                
+                document.getElementById('nuevo-stock').value = item.stock;
+                areaAjuste.classList.remove('d-none');
+            } else {
+                inventarioIdActual = null;
+                msgError.classList.remove('d-none');
+            }
+
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function guardarAjuste(e) {
+        e.preventDefault();
+        const token = localStorage.getItem('access_token');
+        if (!inventarioIdActual) return;
+
+        const nuevoStock = document.getElementById('nuevo-stock').value;
+
+        if (!confirm(`¿Está seguro de cambiar el stock a ${nuevoStock} unidades?`)) return;
+
+        try {
+            const res = await fetch(`/api/inventario/${inventarioIdActual}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ stock: parseInt(nuevoStock) })
+            });
+
+            if (res.ok) {
+                alert('✅ Inventario actualizado correctamente');
+                buscarInventario(); 
+            } else {
+                alert('❌ Error al actualizar. Verifique permisos.');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error de conexión');
+        }
+    }
+
+    function limpiarFormulario() {
+        document.getElementById('select-producto').value = "";
+        document.getElementById('area-ajuste').classList.add('d-none');
+    }
+</script>
+{% endblock %}

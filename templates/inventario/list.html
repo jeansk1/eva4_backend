@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventario - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h6 class="text-uppercase text-muted small fw-bold ls-1">Gestión de Stock</h6>
+        <h2 class="fw-bold text-dark"><i class="bi bi-boxes me-2"></i>Inventario por Sucursal</h2>
+    </div>
+    
+    <a href="/inventario/ajustar" id="btn-ajuste" class="btn btn-warning shadow-sm">
+        <i class="bi bi-pencil-square me-2"></i>Ajuste Manual
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-filter"></i></span>
+                    <select id="filtro-sucursal" class="form-select border-start-0 bg-light" onchange="cargarInventario()">
+                        <option value="">Todas las sucursales</option>
+                        </select>
+                </div>
+            </div>
+            <div class="col-md-6 text-md-end text-muted small mt-2 mt-md-0">
+                Visualizando existencias en tiempo real.
+            </div>
+        </div>
+    </div>
+    
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Sucursal</th>
+                        <th>Producto</th>
+                        <th class="text-center">Stock Actual</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end pe-4">Última Act.</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-inventario">
+                    <tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    /* Modern badge styling */
+    .badge-soft-success { background-color: #d1e7dd; color: #0f5132; }
+    .badge-soft-warning { background-color: #fff3cd; color: #664d03; }
+    .badge-soft-danger { background-color: #f8d7da; color: #842029; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // 1. Get Token and User locally
+        const token = localStorage.getItem('access_token');
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+
+        // 2. Visual Security: Hide adjust button for vendors
+        if (userInfo.rol === 'vendedor') {
+            const btn = document.getElementById('btn-ajuste');
+            if(btn) btn.style.display = 'none';
+        }
+
+        try {
+            // Load Branches
+            const resSuc = await fetch('/api/sucursales/', { headers: { 'Authorization': `Bearer ${token}` }});
+            const sucursales = await resSuc.json();
+            const select = document.getElementById('filtro-sucursal');
+            
+            const listaSucursales = sucursales.results || sucursales;
+
+            listaSucursales.forEach(s => {
+                select.innerHTML += `<option value="${s.id}">${s.nombre}</option>`;
+            });
+            
+            // Initial load
+            cargarInventario();
+
+        } catch (error) {
+            console.error("Error initializing:", error);
+        }
+    });
+
+    async function cargarInventario() {
+        const token = localStorage.getItem('access_token'); 
+        const sucursalId = document.getElementById('filtro-sucursal').value;
+        const tbody = document.getElementById('tabla-inventario');
+        
+        // Loading state
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+
+        let url = '/api/inventario/';
+        if (sucursalId) url += `?sucursal=${sucursalId}`;
+
+        try {
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` }});
+            
+            if (!res.ok) throw new Error('Error al cargar inventario');
+
+            const data = await res.json();
+            const items = data.results || data;
+
+            tbody.innerHTML = '';
+
+            if(items.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                Sin datos de inventario para mostrar
+                            </div>
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            items.forEach(item => {
+                // Semantic Badges
+                let badgeClass = 'badge-soft-success'; // Custom soft green
+                let estadoTexto = 'DISPONIBLE';
+                let icon = '<i class="bi bi-check-circle me-1"></i>';
+                
+                if (item.stock === 0) {
+                    badgeClass = 'badge-soft-danger'; // Custom soft red
+                    estadoTexto = 'AGOTADO';
+                    icon = '<i class="bi bi-x-circle me-1"></i>';
+                } else if (item.stock <= item.punto_reorden) {
+                    badgeClass = 'badge-soft-warning'; // Custom soft yellow
+                    estadoTexto = 'BAJO STOCK';
+                    icon = '<i class="bi bi-exclamation-circle me-1"></i>';
+                }
+
+                const nomSucursal = item.nombre_sucursal || `Sucursal ${item.sucursal}`;
+                const nomProducto = item.nombre_producto || `Producto ${item.producto}`;
+                const fecha = new Date(item.ultima_actualizacion).toLocaleDateString('es-CL');
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-4 fw-bold text-secondary">${nomSucursal}</td>
+                        <td>${nomProducto}</td>
+                        <td class="fw-bold fs-5 text-center text-dark">${item.stock}</td>
+                        <td class="text-center"><span class="badge ${badgeClass} border border-0 rounded-pill px-3">${icon}${estadoTexto}</span></td>
+                        <td class="text-end pe-4 text-muted small">${fecha}</td>
+                    </tr>
+                `;
+            });
+        } catch (error) {
+            console.error(error);
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">Error de conexión al cargar inventario.</td></tr>';
+        }
+    }
+</script>
+{% endblock %}

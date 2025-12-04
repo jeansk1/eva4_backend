@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+
+{% block title %}Pedidos Web - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h6 class="text-uppercase text-muted small fw-bold ls-1">E-commerce</h6>
+        <h2 class="fw-bold text-dark"><i class="bi bi-globe me-2"></i>Gestión de Pedidos</h2>
+        <p class="text-muted mb-0 small">Administra los despachos y estados de órdenes online.</p>
+    </div>
+    <button class="btn btn-outline-primary shadow-sm rounded-pill px-4" onclick="cargarOrdenes()">
+        <i class="bi bi-arrow-clockwise me-2"></i>Actualizar Lista
+    </button>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-2 bg-light rounded-3">
+        <ul class="nav nav-pills nav-fill gap-2" id="pills-tab">
+            <li class="nav-item">
+                <a class="nav-link active fw-bold rounded-pill" href="#" onclick="filtrarEstado('pendiente', this)">
+                    <i class="bi bi-hourglass-split me-1"></i> Pendientes
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link fw-bold rounded-pill" href="#" onclick="filtrarEstado('procesando', this)">
+                    <i class="bi bi-box-seam me-1"></i> Procesando
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link fw-bold rounded-pill" href="#" onclick="filtrarEstado('enviado', this)">
+                    <i class="bi bi-truck me-1"></i> Enviados
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link fw-bold rounded-pill" href="#" onclick="filtrarEstado('entregado', this)">
+                    <i class="bi bi-check-circle me-1"></i> Entregados
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link fw-bold rounded-pill" href="#" onclick="filtrarEstado('', this)">
+                    Todos
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light border-bottom">
+                    <tr>
+                        <th class="ps-4 text-uppercase text-secondary x-small fw-bold">Orden</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">Fecha</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">Cliente</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">Contacto</th>
+                        <th class="text-end text-uppercase text-secondary x-small fw-bold">Total</th>
+                        <th class="text-center text-uppercase text-secondary x-small fw-bold">Estado</th>
+                        <th class="text-end pe-4 text-uppercase text-secondary x-small fw-bold">Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-ordenes">
+                    <tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalOrden" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white border-bottom-0">
+                <div>
+                    <h5 class="modal-title fw-bold">Pedido #<span id="modal-id"></span></h5>
+                    <small class="opacity-75">Gestión de despacho</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="row g-0">
+                    <div class="col-md-5 bg-light border-end p-4">
+                        <h6 class="text-uppercase text-muted x-small fw-bold mb-3">Información de Envío</h6>
+                        
+                        <div class="mb-4">
+                            <label class="x-small text-uppercase fw-bold text-muted">Cliente</label>
+                            <div class="fw-bold text-dark fs-5" id="modal-cliente">-</div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="x-small text-uppercase fw-bold text-muted">Dirección</label>
+                            <div class="d-flex mt-1">
+                                <i class="bi bi-geo-alt-fill text-danger me-2"></i>
+                                <span class="text-dark" id="modal-direccion">-</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="x-small text-uppercase fw-bold text-muted">Contacto</label>
+                            <div class="vstack gap-2 mt-1">
+                                <div><i class="bi bi-telephone me-2 text-secondary"></i> <span id="modal-telefono">-</span></div>
+                                <div><i class="bi bi-envelope me-2 text-secondary"></i> <span id="modal-email" class="text-truncate d-inline-block" style="max-width: 200px;">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-7 p-4 bg-white">
+                        <h6 class="text-uppercase text-muted x-small fw-bold mb-3">Detalle del Pedido</h6>
+                        
+                        <div class="table-responsive border rounded-3 mb-4" style="max-height: 200px; overflow-y: auto;">
+                            <table class="table table-sm table-borderless mb-0 align-middle">
+                                <tbody id="modal-items"></tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center border-top pt-3 mb-4">
+                            <span class="fw-bold text-secondary">Total a Cobrar</span>
+                            <span class="fs-3 fw-bold text-success font-monospace" id="modal-total">$0</span>
+                        </div>
+
+                        <div class="bg-light p-3 rounded-3 border">
+                            <label class="form-label x-small fw-bold text-uppercase mb-2">Actualizar Estado del Pedido</label>
+                            <div class="input-group">
+                                <select class="form-select" id="select-estado">
+                                    <option value="pendiente">⏳ Pendiente</option>
+                                    <option value="procesando">📦 Procesando</option>
+                                    <option value="enviado">🚚 Enviado</option>
+                                    <option value="entregado">✅ Entregado</option>
+                                    <option value="cancelado">🚫 Cancelado</option>
+                                </select>
+                                <button class="btn btn-primary fw-bold" onclick="guardarEstado()">
+                                    <i class="bi bi-save me-1"></i> Guardar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    .x-small { font-size: 0.7rem; }
+    
+    /* Custom Tab Styles */
+    .nav-pills .nav-link {
+        color: #6c757d;
+        border: 1px solid transparent;
+        transition: all 0.2s;
+    }
+    .nav-pills .nav-link:hover {
+        background-color: #e9ecef;
+        color: #0d6efd;
+    }
+    .nav-pills .nav-link.active {
+        background-color: white;
+        color: #0d6efd;
+        border: 1px solid #dee2e6;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let ordenesGlobal = [];
+    let estadoFiltro = 'pendiente';
+    let ordenActualId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarOrdenes();
+    });
+
+    async function cargarOrdenes() {
+        const token = localStorage.getItem('access_token');
+        const tbody = document.getElementById('tabla-ordenes');
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+
+        try {
+            const res = await fetch('/api/ordenes/', { headers: { 'Authorization': `Bearer ${token}` } });
+            
+            if (!res.ok) throw new Error('Error API');
+            
+            const data = await res.json();
+            ordenesGlobal = data.results || data;
+            
+            aplicarFiltro();
+
+        } catch (error) {
+            console.error(error);
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-5">Error de conexión</td></tr>';
+        }
+    }
+
+    function filtrarEstado(estado, elementoNav) {
+        estadoFiltro = estado;
+        
+        if (elementoNav) {
+            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+            elementoNav.classList.add('active');
+        }
+        
+        aplicarFiltro();
+    }
+
+    function aplicarFiltro() {
+        const tbody = document.getElementById('tabla-ordenes');
+        let filtradas = ordenesGlobal;
+
+        if (estadoFiltro) {
+            filtradas = ordenesGlobal.filter(o => o.estado === estadoFiltro);
+        }
+        
+        filtradas.sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en));
+
+        tbody.innerHTML = '';
+
+        if (filtradas.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
+                        <p>No hay pedidos en estado: <strong>${estadoFiltro || 'Todos'}</strong></p>
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        filtradas.forEach(o => {
+            let badgeClass = 'bg-secondary';
+            let icon = 'bi-circle';
+            
+            if(o.estado === 'pendiente') { badgeClass = 'bg-warning text-dark'; icon = 'bi-hourglass-split'; }
+            if(o.estado === 'procesando') { badgeClass = 'bg-info text-dark'; icon = 'bi-box-seam'; }
+            if(o.estado === 'enviado') { badgeClass = 'bg-primary'; icon = 'bi-truck'; }
+            if(o.estado === 'entregado') { badgeClass = 'bg-success'; icon = 'bi-check-circle'; }
+            if(o.estado === 'cancelado') { badgeClass = 'bg-danger'; icon = 'bi-x-circle'; }
+
+            const row = `
+                <tr>
+                    <td class="ps-4 font-monospace fw-bold text-primary">#${o.id}</td>
+                    <td>
+                        <div class="fw-bold text-dark">${new Date(o.creado_en).toLocaleDateString('es-CL')}</div>
+                        <small class="text-muted">${new Date(o.creado_en).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small>
+                    </td>
+                    <td><span class="fw-medium text-dark">${o.nombre_cliente}</span></td>
+                    <td><div class="text-truncate" style="max-width: 150px;" title="${o.email_cliente}">${o.email_cliente}</div></td>
+                    <td class="text-end fw-bold text-success font-monospace">$${parseFloat(o.total).toLocaleString('es-CL')}</td>
+                    <td class="text-center">
+                        <span class="badge ${badgeClass} rounded-pill text-uppercase px-3 shadow-sm" style="font-size:0.65rem;">
+                            <i class="bi ${icon} me-1"></i>${o.estado}
+                        </span>
+                    </td>
+                    <td class="text-end pe-4">
+                        <button class="btn btn-sm btn-outline-primary shadow-sm border-0" onclick="verOrden(${o.id})">
+                            Gestionar <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    }
+
+    function verOrden(id) {
+        ordenActualId = id;
+        const orden = ordenesGlobal.find(o => o.id === id);
+        if(!orden) return;
+
+        // Fill Modal
+        document.getElementById('modal-id').textContent = orden.id;
+        document.getElementById('modal-cliente').textContent = orden.nombre_cliente;
+        document.getElementById('modal-direccion').textContent = orden.direccion_cliente;
+        document.getElementById('modal-telefono').textContent = orden.telefono_cliente;
+        document.getElementById('modal-email').textContent = orden.email_cliente;
+        document.getElementById('modal-total').textContent = '$' + parseFloat(orden.total).toLocaleString('es-CL');
+        document.getElementById('select-estado').value = orden.estado;
+
+        // Fill Items
+        const tbody = document.getElementById('modal-items');
+        tbody.innerHTML = '';
+        if(orden.items) {
+            orden.items.forEach(i => {
+                const nombre = i.nombre_producto || `Producto ID ${i.producto}`;
+                const totalItem = i.cantidad * parseFloat(i.precio_unitario);
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="py-2">
+                            <span class="d-block fw-bold text-dark" style="font-size: 0.85rem;">${nombre}</span>
+                            <small class="text-muted">$${parseFloat(i.precio_unitario).toLocaleString()} c/u</small>
+                        </td>
+                        <td class="text-center align-middle"><span class="badge bg-light text-dark border">x${i.cantidad}</span></td>
+                        <td class="text-end align-middle fw-bold font-monospace">$${totalItem.toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('modalOrden'));
+        modal.show();
+    }
+
+    async function guardarEstado() {
+        const token = localStorage.getItem('access_token');
+        const nuevoEstado = document.getElementById('select-estado').value;
+        
+        if(!ordenActualId) return;
+
+        try {
+            const res = await fetch(`/api/ordenes/${ordenActualId}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ estado: nuevoEstado })
+            });
+
+            if(res.ok) {
+                alert('✅ Estado actualizado correctamente');
+                const modalEl = document.getElementById('modalOrden');
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                modalInstance.hide();
+                cargarOrdenes();
+            } else {
+                alert('Error al actualizar');
+            }
+        } catch(e) {
+            alert('Error de conexión');
+        }
+    }
+</script>
+{% endblock %}

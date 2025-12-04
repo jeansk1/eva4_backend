@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Sucursal - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h6 class="text-uppercase text-muted small fw-bold ls-1">Administración</h6>
+                <h2 class="fw-bold text-dark"><i class="bi bi-pencil-square me-2"></i>Editar Sucursal</h2>
+            </div>
+            <button type="button" onclick="history.back()" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-x-lg me-1"></i> Cancelar
+            </button>
+        </div>
+
+        <div id="loading-spinner" class="text-center py-5">
+            <div class="spinner-border text-info" role="status"></div>
+            <p class="mt-2 text-muted small fw-bold text-uppercase ls-1">Cargando datos...</p>
+        </div>
+
+        <div id="edit-card" class="card border-0 shadow-sm d-none animate-fade-in">
+             <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
+                <span class="badge bg-white text-dark border">Modificando Sucursal</span>
+            </div>
+
+            <div class="card-body p-4">
+                <form id="form-edit-sucursal">
+                    
+                    <h6 class="text-uppercase text-muted small fw-bold mb-3 border-bottom pb-2">Datos Generales</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-7">
+                            <label for="nombre" class="form-label fw-bold">Nombre de la Sucursal</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-building"></i></span>
+                                <input type="text" class="form-control" id="nombre" required>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="telefono" class="form-label fw-bold">Teléfono</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-telephone"></i></span>
+                                <input type="tel" class="form-control" id="telefono" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="text-uppercase text-muted small fw-bold mb-3 border-bottom pb-2">Contacto y Ubicación</h6>
+                    <div class="mb-3">
+                        <label for="email" class="form-label fw-bold">Correo Electrónico</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+                            <input type="email" class="form-control" id="email" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="direccion" class="form-label fw-bold">Dirección Física</label>
+                        <textarea class="form-control" id="direccion" rows="3" required></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end pt-3 border-top">
+                         <button type="button" onclick="history.back()" class="btn btn-light text-muted px-4 me-2">Descartar</button>
+                        <button type="submit" class="btn btn-primary px-5 shadow-sm">
+                            <i class="bi bi-save me-2"></i> Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // 1. Validar Permisos (Solo Admin puede editar)
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        if (userInfo.rol === 'vendedor' || userInfo.rol === 'gerente') {
+            alert('⛔ Acceso denegado: No tiene permisos para editar sucursales.');
+            window.location.href = '/sucursales/';
+            return;
+        }
+
+        // 2. Obtener ID de la URL (?id=1)
+        const urlParams = new URLSearchParams(window.location.search);
+        const sucursalId = urlParams.get('id');
+        
+        if (!sucursalId) {
+            alert('ID de sucursal no especificado.');
+            window.location.href = '/sucursales/';
+            return;
+        }
+
+        // 3. Cargar Datos
+        const localToken = localStorage.getItem('access_token');
+        try {
+            const res = await fetch(`/api/sucursales/${sucursalId}/`, {
+                headers: { 'Authorization': `Bearer ${localToken}` }
+            });
+
+            if (!res.ok) throw new Error('Error al cargar');
+            const s = await res.json();
+
+            // Llenar formulario
+            document.getElementById('nombre').value = s.nombre;
+            document.getElementById('telefono').value = s.telefono;
+            document.getElementById('email').value = s.email;
+            document.getElementById('direccion').value = s.direccion;
+
+            // Mostrar
+            document.getElementById('loading-spinner').classList.add('d-none');
+            document.getElementById('edit-card').classList.remove('d-none');
+
+        } catch (error) {
+            console.error(error);
+            alert('Error cargando datos de la sucursal.');
+            window.location.href = '/sucursales/';
+        }
+
+        // 4. Guardar Cambios (PATCH)
+        document.getElementById('form-edit-sucursal').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(!confirm('¿Guardar cambios en la sucursal?')) return;
+
+            const payload = {
+                nombre: document.getElementById('nombre').value,
+                telefono: document.getElementById('telefono').value,
+                email: document.getElementById('email').value,
+                direccion: document.getElementById('direccion').value
+            };
+
+            try {
+                const resUpdate = await fetch(`/api/sucursales/${sucursalId}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localToken}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (resUpdate.ok) {
+                    alert('✅ Sucursal actualizada correctamente');
+                    window.location.href = '/sucursales/';
+                } else {
+                    const err = await resUpdate.json();
+                    alert('Error al guardar: ' + JSON.stringify(err));
+                }
+            } catch (e) {
+                alert('Error de conexión');
+            }
+        });
+    });
+</script>
+{% endblock %}

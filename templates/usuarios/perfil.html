@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block title %}Mi Perfil - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center g-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-lg h-100 overflow-hidden rounded-4">
+            <div class="card-header border-0 py-5 text-center position-relative" style="background: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%);">
+                
+                <div class="position-relative z-1">
+                    <div class="avatar-circle bg-white text-primary shadow-lg mx-auto mb-3 border border-4 border-white bg-opacity-10">
+                        <i class="bi bi-person-circle fs-1"></i>
+                    </div>
+                    
+                    <h4 class="text-white mb-1 fw-bold" id="profile-username" style="text-shadow: 0 2px 4px rgba(0,0,0,0.2);">Cargando...</h4>
+                    <p class="text-white-50 mb-3 small fw-medium" id="profile-email">-</p>
+                    
+                    <span class="badge bg-white text-primary fw-bold px-3 py-2 rounded-pill shadow-sm" id="profile-role">-</span>
+                </div>
+            </div>
+
+            <div class="card-body p-4 bg-white">
+                <h6 class="text-uppercase text-secondary small fw-bold mb-4 border-bottom pb-2">Datos Personales</h6>
+                
+                <div class="vstack gap-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center text-secondary">
+                            <i class="bi bi-person-vcard fs-5 me-3"></i>
+                            <span class="small fw-bold">RUT</span>
+                        </div>
+                        <span class="fw-bold text-dark" id="profile-rut">-</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center text-secondary">
+                            <i class="bi bi-phone fs-5 me-3"></i>
+                            <span class="small fw-bold">Teléfono</span>
+                        </div>
+                        <span class="fw-bold text-dark" id="profile-phone">-</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center text-secondary">
+                            <i class="bi bi-building fs-5 me-3"></i>
+                            <span class="small fw-bold">Compañía</span>
+                        </div>
+                        <span class="fw-bold text-dark text-end" style="max-width: 150px;" id="profile-company">-</span>
+                    </div>
+                    
+                    <div class="mt-4 pt-3 border-top text-center">
+                         <span class="badge bg-success border border-success-subtle rounded-pill px-4 py-2">
+                            <i class="bi bi-check-circle-fill me-1"></i> CUENTA ACTIVA
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm h-100 rounded-4">
+            <div class="card-header bg-white py-4 border-bottom">
+                <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-shield-check text-primary me-2"></i>Seguridad y Acceso</h5>
+            </div>
+            <div class="card-body p-4">
+                
+                <div class="alert alert-light border-start border-4 border-warning shadow-sm mb-4">
+                    <div class="d-flex">
+                        <i class="bi bi-exclamation-triangle-fill text-warning fs-4 me-3"></i>
+                        <div>
+                            <strong>Cambio de Contraseña</strong><br>
+                            <small class="text-muted">Al actualizar su clave, la sesión se cerrará automáticamente en todos sus dispositivos por seguridad.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="form-password">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label for="new_password" class="form-label fw-bold text-secondary small text-uppercase">Nueva Contraseña</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-key text-muted"></i></span>
+                                <input type="password" class="form-control border-start-0 bg-light" id="new_password" required minlength="4" placeholder="Mínimo 4 caracteres">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="confirm_password" class="form-label fw-bold text-secondary small text-uppercase">Confirmar Contraseña</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-check-lg text-muted"></i></span>
+                                <input type="password" class="form-control border-start-0 bg-light" id="confirm_password" required minlength="4" placeholder="Repita la contraseña">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-5 pt-3 border-top">
+                        <button type="submit" class="btn btn-primary px-5 py-2 shadow-sm fw-bold rounded-pill">
+                            <i class="bi bi-save2 me-2"></i> Actualizar Clave
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .avatar-circle {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    /* Input focus effect */
+    .form-control:focus {
+        background-color: #fff;
+        box-shadow: none;
+        border-color: #86b7fe;
+    }
+    .input-group-text {
+        border-color: #dee2e6;
+    }
+    .input-group:focus-within .input-group-text {
+        background-color: #fff;
+        border-color: #86b7fe;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentUserId = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await cargarPerfil();
+    });
+
+    async function cargarPerfil() {
+        const token = localStorage.getItem('access_token'); // Token Local
+        
+        try {
+            const response = await fetch('/api/usuarios/me/', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) throw new Error('No se pudo cargar el perfil');
+
+            const user = await response.json();
+            currentUserId = user.id;
+
+            // Renderizar Datos
+            document.getElementById('profile-username').textContent = user.username;
+            document.getElementById('profile-email').textContent = user.email;
+            document.getElementById('profile-role').textContent = formatRole(user.rol);
+            document.getElementById('profile-rut').textContent = user.rut || 'No informado';
+            document.getElementById('profile-phone').textContent = user.telefono || 'No informado';
+            
+            const localInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+            
+            // Intentar mostrar nombre de compañía si está en local storage, sino ID o N/A
+            let companyDisplay = 'N/A (Global)';
+            if (localInfo.compania) {
+                companyDisplay = localInfo.compania;
+            } else if (user.compania) {
+                companyDisplay = `#${user.compania}`;
+            }
+            
+            document.getElementById('profile-company').textContent = companyDisplay;
+
+        } catch (error) {
+            console.error(error);
+            alert('Error cargando perfil. Sesión expirada.');
+            window.location.href = '/login/';
+        }
+    }
+
+    document.getElementById('form-password').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const p1 = document.getElementById('new_password').value;
+        const p2 = document.getElementById('confirm_password').value;
+
+        if (p1 !== p2) {
+            alert('Las contraseñas no coinciden');
+            return;
+        }
+
+        if (!confirm('¿Está seguro de cambiar su contraseña?')) return;
+
+        const token = localStorage.getItem('access_token'); // Token Local
+
+        try {
+            const response = await fetch(`/api/usuarios/${currentUserId}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ password: p1 })
+            });
+
+            if (response.ok) {
+                alert('✅ Contraseña actualizada correctamente.\nPor favor inicie sesión nuevamente.');
+                localStorage.clear();
+                window.location.href = '/login/';
+            } else {
+                const err = await response.json();
+                alert('Error al actualizar: ' + JSON.stringify(err));
+            }
+        } catch (error) {
+            alert('Error de conexión');
+        }
+    });
+
+    function formatRole(role) {
+        const map = {
+            'super_admin': 'Super Administrador',
+            'admin_cliente': 'Administrador Cliente',
+            'gerente': 'Gerente de Tienda',
+            'vendedor': 'Vendedor POS',
+            'cliente_final': 'Cliente E-commerce'
+        };
+        return map[role] || role.toUpperCase();
+    }
+</script>
+{% endblock %}

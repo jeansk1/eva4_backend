@@ -1,0 +1,345 @@
+{% extends 'base.html' %}
+
+{% block title %}Ingresos de Mercadería - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+        <h6 class="text-uppercase text-muted small fw-bold ls-1">Inventario</h6>
+        <h2 class="fw-bold text-dark"><i class="bi bi-truck me-2"></i>Ingreso de Mercadería</h2>
+        <p class="text-muted mb-0">Gestión de compras a proveedores y reposición de stock.</p>
+    </div>
+    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCompra">
+        <i class="bi bi-plus-lg me-2"></i> Registrar Compra
+    </button>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0 fw-bold text-secondary">Historial de Movimientos</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">ID</th>
+                        <th>Fecha</th>
+                        <th>Proveedor / Factura</th>
+                        <th>Sucursal Destino</th>
+                        <th>Detalle Carga</th>
+                        <th class="text-end pe-4">Total Compra</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-movimientos">
+                    <tr><td colspan="6" class="text-center py-5 text-muted">Cargando historial...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCompra" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-box-seam me-2"></i>Nueva Recepción de Mercadería</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body p-4 bg-light">
+                <form id="form-compra">
+                    
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body">
+                            <h6 class="text-uppercase text-muted small fw-bold mb-3 border-bottom pb-2">Datos de la Factura</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Proveedor</label>
+                                    <select id="compra-proveedor" class="form-select" required></select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Sucursal de Destino</label>
+                                    <select id="compra-sucursal" class="form-select" required></select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">N° Factura</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white"><i class="bi bi-receipt"></i></span>
+                                        <input type="text" id="compra-factura" class="form-control" required placeholder="Ej: 123456">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Fecha de Emisión</label>
+                                    <input type="date" id="compra-fecha" class="form-control" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                <h6 class="text-uppercase text-muted small fw-bold mb-0">Detalle de Productos</h6>
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill" onclick="agregarFilaItem()">
+                                    <i class="bi bi-plus-circle me-1"></i> Agregar Item
+                                </button>
+                            </div>
+                            
+                            <div id="lista-items-compra" class="vstack gap-2">
+                                </div>
+
+                            <div class="alert alert-info d-flex align-items-center mt-3 mb-0 py-2">
+                                <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                                <div>
+                                    Total de la Factura: <strong id="compra-total-display" class="fs-5 ms-2">$0</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+            
+            <div class="modal-footer bg-white">
+                <button type="button" class="btn btn-light text-muted" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" onclick="enviarFormularioCompra()" class="btn btn-success px-4">
+                    <i class="bi bi-check-lg me-1"></i> Confirmar Ingreso
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    .item-row { transition: background-color 0.2s; }
+    .item-row:hover { background-color: #f8f9fa; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let listaProductos = []; 
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Inicializar fecha
+        document.getElementById('compra-fecha').valueAsDate = new Date();
+        
+        await cargarDatosIniciales();
+        await cargarHistorial();
+        
+        // Agregar primera fila vacía
+        agregarFilaItem();
+    });
+
+    async function cargarDatosIniciales() {
+        // Token local para evitar conflictos
+        const token = localStorage.getItem('access_token');
+        try {
+            const [resSuc, resProv, resProd] = await Promise.all([
+                fetch('/api/sucursales/', { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch('/api/proveedores/', { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch('/api/productos/', { headers: { 'Authorization': `Bearer ${token}` } })
+            ]);
+
+            const sucursales = await resSuc.json();
+            const proveedores = await resProv.json();
+            
+            const dataProd = await resProd.json();
+            listaProductos = dataProd.results || dataProd; // Soporte paginación
+
+            // Llenar Selects
+            const selSuc = document.getElementById('compra-sucursal');
+            (sucursales.results || sucursales).forEach(s => 
+                selSuc.innerHTML += `<option value="${s.id}">${s.nombre}</option>`
+            );
+
+            const selProv = document.getElementById('compra-proveedor');
+            (proveedores.results || proveedores).forEach(p => 
+                selProv.innerHTML += `<option value="${p.id}">${p.nombre}</option>`
+            );
+
+        } catch (error) {
+            console.error('Error cargando listas:', error);
+        }
+    }
+
+    async function cargarHistorial() {
+        const token = localStorage.getItem('access_token');
+        try {
+            const res = await fetch('/api/compras/', { headers: { 'Authorization': `Bearer ${token}` } });
+            if(!res.ok) throw new Error('Error API');
+            
+            const data = await res.json();
+            const compras = data.results || data;
+            
+            const tbody = document.getElementById('tabla-movimientos');
+            tbody.innerHTML = '';
+
+            if(compras.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-1 d-block mb-2"></i>No hay movimientos registrados</td></tr>';
+                return;
+            }
+
+            // Ordenar recientes primero
+            compras.sort((a, b) => b.id - a.id);
+
+            compras.forEach(c => {
+                // Generar Badges de resumen
+                let itemsPreview = '';
+                const maxItems = 3;
+                
+                if (c.items && c.items.length > 0) {
+                    c.items.slice(0, maxItems).forEach(item => {
+                        // Intentar buscar nombre en la lista local si el serializer no lo trae
+                        let nombre = item.nombre_producto || `ID ${item.producto}`;
+                        if (!item.nombre_producto) {
+                            const p = listaProductos.find(x => x.id == item.producto);
+                            if(p) nombre = p.nombre;
+                        }
+                        
+                        itemsPreview += `<span class="badge bg-light text-dark border me-1 mb-1 fw-normal">${nombre} <span class="fw-bold">x${item.cantidad}</span></span>`;
+                    });
+                    if (c.items.length > maxItems) {
+                        itemsPreview += `<span class="badge bg-secondary mb-1">+${c.items.length - maxItems} más</span>`;
+                    }
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-4 text-muted fw-bold">#${c.id}</td>
+                        <td>
+                            <div>${new Date(c.fecha).toLocaleDateString('es-CL')}</div>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark">${c.nombre_proveedor || 'Proveedor ' + c.proveedor}</div>
+                            <div class="small text-muted"><i class="bi bi-receipt me-1"></i>${c.numero_factura}</div>
+                        </td>
+                        <td>${c.nombre_sucursal || 'Sucursal ' + c.sucursal}</td>
+                        <td>${itemsPreview}</td>
+                        <td class="text-end pe-4 fw-bold text-success">$${parseFloat(c.total).toLocaleString('es-CL')}</td>
+                    </tr>
+                `;
+            });
+        } catch (error) {
+            console.error(error);
+            document.getElementById('tabla-movimientos').innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error de conexión</td></tr>';
+        }
+    }
+
+    // --- LÓGICA DE FORMULARIO ---
+    function agregarFilaItem() {
+        const contenedor = document.getElementById('lista-items-compra');
+        const div = document.createElement('div');
+        div.className = 'row g-2 align-items-center item-row p-2 rounded border-bottom';
+        
+        let optionsProd = '<option value="">Seleccionar producto...</option>';
+        listaProductos.forEach(p => {
+            optionsProd += `<option value="${p.id}" data-costo="${p.costo}">${p.sku} - ${p.nombre}</option>`;
+        });
+
+        div.innerHTML = `
+            <div class="col-md-5">
+                <select class="form-select form-select-sm select-prod" required onchange="actualizarPrecioFila(this)">
+                    ${optionsProd}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">Cant.</span>
+                    <input type="number" class="form-control cantidad-input text-center" min="1" value="1" required onchange="calcTotal()">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control precio-input" min="0" placeholder="Costo" required onchange="calcTotal()">
+                </div>
+            </div>
+            <div class="col-md-2 text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="this.closest('.item-row').remove(); calcTotal()" title="Eliminar fila">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `;
+        contenedor.appendChild(div);
+    }
+
+    function actualizarPrecioFila(select) {
+        const costo = select.options[select.selectedIndex].getAttribute('data-costo');
+        const row = select.closest('.item-row');
+        const inputPrecio = row.querySelector('.precio-input');
+        if(costo) inputPrecio.value = Math.round(costo);
+        calcTotal();
+    }
+
+    function calcTotal() {
+        let total = 0;
+        document.querySelectorAll('.item-row').forEach(row => {
+            const cant = parseFloat(row.querySelector('.cantidad-input').value) || 0;
+            const precio = parseFloat(row.querySelector('.precio-input').value) || 0;
+            total += cant * precio;
+        });
+        document.getElementById('compra-total-display').textContent = '$' + total.toLocaleString('es-CL');
+    }
+
+    async function enviarFormularioCompra() {
+        const token = localStorage.getItem('access_token');
+        const form = document.getElementById('form-compra');
+        
+        // Validación básica
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const items = [];
+        document.querySelectorAll('.item-row').forEach(row => {
+            const prodId = row.querySelector('.select-prod').value;
+            const cant = row.querySelector('.cantidad-input').value;
+            const precio = row.querySelector('.precio-input').value;
+            
+            if (prodId && cant > 0) {
+                items.push({
+                    producto: parseInt(prodId),
+                    cantidad: parseInt(cant),
+                    precio_unitario: parseInt(precio)
+                });
+            }
+        });
+
+        if (items.length === 0) return alert('Debe agregar al menos un producto a la factura.');
+
+        const payload = {
+            sucursal: document.getElementById('compra-sucursal').value,
+            proveedor: document.getElementById('compra-proveedor').value,
+            numero_factura: document.getElementById('compra-factura').value,
+            fecha: document.getElementById('compra-fecha').value,
+            items: items
+        };
+
+        try {
+            const res = await fetch('/api/compras/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert('✅ Compra registrada correctamente. Stock actualizado.');
+                window.location.reload();
+            } else {
+                const error = await res.json();
+                alert('Error al registrar: ' + JSON.stringify(error));
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error de conexión');
+        }
+    }
+</script>
+{% endblock %}

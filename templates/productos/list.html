@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+
+{% block title %}Catálogo - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-6">
+        <h6 class="text-uppercase text-muted small fw-bold ls-1 mb-1">Inventario</h6>
+        <h2 class="fw-bold text-dark mb-0">Catálogo de Productos</h2>
+    </div>
+    <div class="col-md-6">
+        <div class="d-flex justify-content-md-end gap-2 mt-3 mt-md-0">
+            <div class="input-group shadow-sm" style="max-width: 250px;">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="buscador" class="form-control border-start-0 ps-0" placeholder="Buscar SKU o nombre...">
+            </div>
+            <a href="/productos/create/" id="btn-crear" class="btn btn-primary shadow-sm px-4">
+                <i class="bi bi-plus-lg me-2"></i>Nuevo
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light border-bottom">
+                    <tr>
+                        <th class="ps-4 text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Producto</th>
+                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Categoría</th>
+                        <th class="text-end text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Precio Venta</th>
+                        <th id="th-costo" class="text-end text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Costo</th>
+                        <th class="text-end pe-4 text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-productos">
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <div class="spinner-border text-primary spinner-sm" role="status"></div>
+                            <p class="mt-2 text-muted small fw-bold">Cargando catálogo...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer bg-white py-3 border-top-0 d-flex justify-content-between align-items-center">
+        <small class="text-muted">Mostrando <span id="total-items">0</span> productos</small>
+    </div>
+</div>
+
+<style>
+    .text-xxs { font-size: 0.75rem; }
+    .ls-1 { letter-spacing: 1px; }
+    .font-weight-bolder { font-weight: 700 !important; }
+    
+    /* Icono Avatar */
+    .avatar-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        margin-right: 1rem;
+    }
+
+    /* Badges Suaves */
+    .badge-soft-primary { background-color: #e6f2ff; color: #0069d9; }
+    .badge-soft-success { background-color: #d4edda; color: #155724; }
+    .badge-soft-info    { background-color: #d1ecf1; color: #0c5460; }
+    .badge-soft-warning { background-color: #fff3cd; color: #856404; }
+    .badge-soft-danger  { background-color: #f8d7da; color: #721c24; }
+    .badge-soft-secondary { background-color: #e2e3e5; color: #383d41; }
+
+    /* --- NUEVOS ESTILOS DE PRECIOS --- */
+    .price-main {
+        font-size: 1.1rem;        /* Un poco más grande */
+        font-weight: 800;         /* Bien negrita */
+        color: #198754;           /* Verde Bootstrap Success */
+        letter-spacing: -0.5px;   /* Letras un poco más juntas para que se vea compacto */
+    }
+
+    .price-cost {
+        font-size: 0.95rem;       /* Un poco más chico */
+        font-weight: 600;         /* Seminegrita */
+        color: #20c997;           /* Verde Teal (diferente al precio) */
+        opacity: 0.8;             /* Un poco más suave */
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let productosGlobal = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const localToken = localStorage.getItem('access_token');
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        const isVendedor = userInfo.rol === 'vendedor';
+        
+        // Configurar UI según Rol
+        if (isVendedor) {
+            const btn = document.getElementById('btn-crear');
+            if(btn) btn.style.display = 'none';
+            document.getElementById('th-costo').style.display = 'none';
+        }
+
+        // Buscador en tiempo real
+        document.getElementById('buscador').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtrados = productosGlobal.filter(p => 
+                p.nombre.toLowerCase().includes(term) || 
+                p.sku.toLowerCase().includes(term)
+            );
+            renderizarTabla(filtrados, isVendedor);
+        });
+
+        try {
+            const response = await fetch('/api/productos/', {
+                headers: { 'Authorization': `Bearer ${localToken}` }
+            });
+
+            if (!response.ok) throw new Error('Error al cargar');
+            const data = await response.json();
+            productosGlobal = data.results || data;
+
+            renderizarTabla(productosGlobal, isVendedor);
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('tabla-productos').innerHTML = 
+                '<tr><td colspan="6" class="text-center text-danger py-4">Error cargando datos.</td></tr>';
+        }
+    });
+
+    function renderizarTabla(productos, isVendedor) {
+        const tbody = document.getElementById('tabla-productos');
+        document.getElementById('total-items').textContent = productos.length;
+        tbody.innerHTML = '';
+        
+        if(productos.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-5">
+                        <div class="text-muted opacity-50 mb-2"><i class="bi bi-box2 display-4"></i></div>
+                        <h6 class="text-muted">No se encontraron productos</h6>
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        productos.forEach(p => {
+            const catInfo = obtenerInfoCategoria(p.categoria);
+            
+            // Formateo de Precios
+            const precioFmt = '$ ' + parseInt(p.precio).toLocaleString('es-CL');
+            const costoFmt = '$ ' + parseInt(p.costo).toLocaleString('es-CL');
+
+            // --- AQUI ESTA LA DIFERENCIA VISUAL ---
+            const costoCol = isVendedor ? '' : 
+                `<td class="text-end price-cost">${costoFmt}</td>`;
+            
+            const btnEditar = isVendedor ? '' : 
+                `<a href="/productos/edit/?id=${p.id}" class="btn btn-icon btn-sm btn-light text-warning shadow-sm border" title="Editar"><i class="bi bi-pencil-fill"></i></a>`;
+
+            const row = `
+                <tr>
+                    <td class="ps-4">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-icon ${catInfo.bgClass} bg-opacity-10 text-${catInfo.color}">
+                                <i class="bi ${catInfo.icon}"></i>
+                            </div>
+                            <div class="d-flex flex-column justify-content-center">
+                                <h6 class="mb-0 text-sm fw-bold text-dark">${p.nombre}</h6>
+                                <p class="text-xs text-secondary mb-0 small text-uppercase ls-1">SKU: ${p.sku}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge ${catInfo.badgeClass} border border-0 px-3 py-2 rounded-pill text-uppercase" style="font-size: 0.7rem;">
+                            ${p.categoria}
+                        </span>
+                    </td>
+                    
+                    <td class="text-end">
+                        <span class="price-main">${precioFmt}</span>
+                    </td>
+                    
+                    ${costoCol}
+                    
+                    <td class="text-end pe-4">
+                        <div class="d-flex gap-1 justify-content-end">
+                            <a href="/productos/detalle/?id=${p.id}" class="btn btn-icon btn-sm btn-light text-primary shadow-sm border" title="Ver Detalle">
+                                <i class="bi bi-eye-fill"></i>
+                            </a>
+                            ${btnEditar}
+                        </div>
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    }
+
+    function obtenerInfoCategoria(cat) {
+        const map = {
+            'electronica': { icon: 'bi-cpu', color: 'primary', bgClass: 'bg-primary', badgeClass: 'badge-soft-primary' },
+            'ropa':        { icon: 'bi-bag', color: 'danger', bgClass: 'bg-danger', badgeClass: 'badge-soft-danger' },
+            'alimentos':   { icon: 'bi-basket', color: 'success', bgClass: 'bg-success', badgeClass: 'badge-soft-success' },
+            'bebidas':     { icon: 'bi-cup-straw', color: 'info', bgClass: 'bg-info', badgeClass: 'badge-soft-info' },
+            'limpieza':    { icon: 'bi-stars', color: 'warning', bgClass: 'bg-warning', badgeClass: 'badge-soft-warning' },
+            'otros':       { icon: 'bi-box', color: 'secondary', bgClass: 'bg-secondary', badgeClass: 'badge-soft-secondary' }
+        };
+        return map[cat] || map['otros'];
+    }
+</script>
+{% endblock %}

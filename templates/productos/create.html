@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+
+{% block title %}Nuevo Producto - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h6 class="text-uppercase text-muted small fw-bold ls-1">Catálogo</h6>
+                <h2 class="fw-bold text-dark"><i class="bi bi-box-seam me-2"></i>Nuevo Producto</h2>
+            </div>
+            <a href="/productos/" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-x-lg me-1"></i> Cancelar
+            </a>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form id="form-create-product" enctype="multipart/form-data">
+                    
+                    <h6 class="text-uppercase text-muted small fw-bold mb-3 border-bottom pb-2">Identificación</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label for="sku" class="form-label fw-bold">SKU (Código)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-barcode"></i></span>
+                                <input type="text" class="form-control" id="sku" required placeholder="Ej: PROD-001">
+                            </div>
+                            <div class="form-text small">Identificador único.</div>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="nombre" class="form-label fw-bold">Nombre del Producto</label>
+                            <input type="text" class="form-control" id="nombre" required placeholder="Ej: Bebida Cola 3L">
+                        </div>
+                    </div>
+
+                    <h6 class="text-uppercase text-muted small fw-bold mb-3 border-bottom pb-2">Detalles</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="categoria" class="form-label fw-bold">Categoría</label>
+                            <select class="form-select" id="categoria" required>
+                                <option value="" selected disabled>Seleccione una categoría...</option>
+                                <option value="electronica">🔌 Electrónica</option>
+                                <option value="ropa">👕 Ropa</option>
+                                <option value="alimentos">🥫 Alimentos</option>
+                                <option value="bebidas">🥤 Bebidas</option>
+                                <option value="limpieza">🧹 Limpieza</option>
+                                <option value="otros">📦 Otros</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="imagen" class="form-label fw-bold">Imagen (Opcional)</label>
+                            <input type="file" class="form-control" id="imagen" accept="image/*">
+                            <div class="form-text small">JPG, PNG, WEBP (Máx 5MB)</div>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="descripcion" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="descripcion" rows="3" placeholder="Detalles técnicos, formato, etc."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="bg-light p-3 rounded-3 mb-4 border border-light-subtle">
+                        <h6 class="text-uppercase text-muted small fw-bold mb-3">Información Financiera</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="costo" class="form-label fw-bold text-secondary">Costo Unitario (Neto)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="costo" required min="0" step="1" placeholder="0">
+                                </div>
+                                <div class="form-text small">Valor de compra al proveedor.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="precio" class="form-label fw-bold text-success">Precio de Venta</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-success-subtle text-success border-success-subtle">$</span>
+                                    <input type="number" class="form-control border-success-subtle" id="precio" required min="0" step="1" placeholder="0">
+                                </div>
+                                <div class="form-text small">Valor final al cliente.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a href="/productos/" class="btn btn-light text-muted">Descartar</a>
+                        <button type="submit" class="btn btn-primary px-5 shadow-sm">
+                            <i class="bi bi-check-lg me-1"></i> Guardar Producto
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    .bg-success-subtle { background-color: #d1e7dd; }
+    .border-success-subtle { border-color: #a3cfbb; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('form-create-product').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const token = localStorage.getItem('access_token');
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+
+        if (!userInfo.compania_id && userInfo.rol !== 'super_admin') {
+            alert('Error: No se ha identificado la compañía del usuario.');
+            return;
+        }
+
+        // --- USO CORRECTO DE FORMDATA (Obligatorio para subir archivos) ---
+        const formData = new FormData();
+        formData.append('sku', document.getElementById('sku').value);
+        formData.append('nombre', document.getElementById('nombre').value);
+        formData.append('descripcion', document.getElementById('descripcion').value);
+        formData.append('categoria', document.getElementById('categoria').value);
+        formData.append('precio', document.getElementById('precio').value);
+        formData.append('costo', document.getElementById('costo').value);
+        formData.append('compania', userInfo.compania_id);
+
+        // Agregar imagen SOLO si existe
+        const fileInput = document.getElementById('imagen');
+        if (fileInput.files.length > 0) {
+            formData.append('imagen', fileInput.files[0]);
+        }
+
+        // Feedback visual
+        const btn = document.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
+
+        try {
+            const response = await fetch('/api/productos/', {
+                method: 'POST',
+                headers: {
+                    // IMPORTANTE: NO poner 'Content-Type': 'application/json' aquí.
+                    // Al usar FormData, el navegador pone el Content-Type correcto automáticamente.
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData // Enviamos el objeto FormData, NO un JSON.stringify
+            });
+
+            if (response.ok) {
+                btn.className = 'btn btn-success px-5 shadow-sm';
+                btn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> ¡Creado!';
+                setTimeout(() => { window.location.href = '/productos/'; }, 800);
+            } else {
+                const data = await response.json();
+                let errorMsg = 'Error al crear producto:\n';
+                if (data.sku) errorMsg += '- El SKU ya existe o es inválido.\n';
+                if (data.detail) errorMsg += `- ${data.detail}\n`;
+                if (!data.sku && !data.detail) errorMsg += JSON.stringify(data);
+                
+                alert(errorMsg);
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error de conexión con el servidor.');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    });
+</script>
+{% endblock %}

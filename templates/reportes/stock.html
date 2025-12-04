@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+
+{% block title %}Valorización de Stock - TemucoSoft{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h6 class="text-uppercase text-muted small fw-bold ls-1">Inteligencia de Negocios</h6>
+        <h2 class="fw-bold text-dark"><i class="bi bi-box-seam me-2"></i>Valorización de Inventario</h2>
+        <p class="text-muted mb-0 small">Análisis de costos inmovilizados y niveles de stock.</p>
+    </div>
+    <button class="btn btn-success shadow-sm" onclick="exportarReporteStock()">
+        <i class="bi bi-file-earmark-spreadsheet me-2"></i>Exportar Datos
+    </button>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body bg-light rounded-3 p-2">
+        <div class="d-flex align-items-center">
+            <div class="input-group" style="max-width: 400px;">
+                <span class="input-group-text bg-white border-0 fw-bold text-secondary">Sucursal</span>
+                <select id="filtro-sucursal" class="form-select border-0 shadow-none" onchange="generarReporte()">
+                    <option value="">Todas las Sucursales</option>
+                    </select>
+            </div>
+            <div class="ms-auto text-muted small pe-3">
+                <i class="bi bi-info-circle me-1"></i> Datos en tiempo real
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-cash-coin fs-3 me-2 opacity-75"></i>
+                    <h6 class="text-uppercase mb-0 small opacity-75 fw-bold">Valor Total (Costo)</h6>
+                </div>
+                <h2 id="kpi-valor-total" class="display-5 fw-bold mb-0">-</h2>
+                <small class="opacity-75">Capital inmovilizado en bodega</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 bg-white">
+            <div class="card-body border-start border-5 border-warning">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-exclamation-triangle-fill fs-3 me-2 text-warning"></i>
+                    <h6 class="text-uppercase mb-0 small text-muted fw-bold">Stock Crítico</h6>
+                </div>
+                <h2 id="kpi-criticos" class="display-5 fw-bold text-dark mb-0">-</h2>
+                <small class="text-muted">Productos bajo punto de reorden</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 bg-white">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="text-uppercase text-muted small fw-bold mb-1">Distribución</h6>
+                    <small class="text-muted d-block">Por Categoría ($)</small>
+                </div>
+                <div style="height: 100px; width: 100px;">
+                    <canvas id="chartCategorias"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 border-bottom-0">
+        <h5 class="mb-0 fw-bold text-secondary">Detalle de Existencias</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tabla-stock-reporte">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 text-uppercase text-secondary x-small fw-bold">Sucursal</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">Producto</th>
+                        <th class="text-uppercase text-secondary x-small fw-bold">Categoría</th>
+                        <th class="text-center text-uppercase text-secondary x-small fw-bold">Stock</th>
+                        <th class="text-end text-uppercase text-secondary x-small fw-bold">Costo Unit.</th>
+                        <th class="text-end text-uppercase text-secondary x-small fw-bold">Valor Total</th>
+                        <th class="text-center pe-4 text-uppercase text-secondary x-small fw-bold">Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-stock">
+                    <tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    .x-small { font-size: 0.7rem; }
+    .font-monospace { font-family: monospace; letter-spacing: -0.5px; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Token local para evitar conflictos
+    let inventarioGlobal = [];
+    let productosGlobal = [];
+    let chartInstance = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await cargarFiltros();
+        await cargarDatosBase(); 
+        generarReporte(); 
+    });
+
+    async function cargarFiltros() {
+        const token = localStorage.getItem('access_token');
+        try {
+            const res = await fetch('/api/sucursales/', { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await res.json();
+            const select = document.getElementById('filtro-sucursal');
+            (data.results || data).forEach(s => 
+                select.innerHTML += `<option value="${s.id}">${s.nombre}</option>`
+            );
+        } catch(e) { console.error(e); }
+    }
+
+    async function cargarDatosBase() {
+        const token = localStorage.getItem('access_token');
+        try {
+            const [resInv, resProd] = await Promise.all([
+                fetch('/api/inventario/', { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch('/api/productos/', { headers: { 'Authorization': `Bearer ${token}` } })
+            ]);
+
+            const dInv = await resInv.json();
+            const dProd = await resProd.json();
+
+            inventarioGlobal = dInv.results || dInv;
+            productosGlobal = dProd.results || dProd;
+
+        } catch (error) {
+            console.error("Error cargando datos base:", error);
+            document.getElementById('tbody-stock').innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error de conexión</td></tr>';
+        }
+    }
+
+    function generarReporte() {
+        const sucursalId = document.getElementById('filtro-sucursal').value;
+        const tbody = document.getElementById('tbody-stock');
+        tbody.innerHTML = '';
+
+        // Filtrar Inventario
+        let itemsFiltrados = inventarioGlobal;
+        if (sucursalId) {
+            itemsFiltrados = inventarioGlobal.filter(i => i.sucursal == sucursalId);
+        }
+
+        if (itemsFiltrados.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted">No hay datos de inventario para mostrar.</td></tr>';
+            actualizarKPIs(0, 0, {});
+            return;
+        }
+
+        // Procesar Datos
+        let valorTotalInventario = 0;
+        let itemsCriticos = 0;
+        let categoriasCount = {}; 
+
+        itemsFiltrados.forEach(item => {
+            // Buscar producto
+            const productoDetalle = productosGlobal.find(p => p.id === item.producto);
+            
+            if (productoDetalle) {
+                const costoUnit = parseFloat(productoDetalle.costo);
+                const valorFila = item.stock * costoUnit;
+                
+                // KPIs
+                valorTotalInventario += valorFila;
+                if (item.stock <= item.punto_reorden) itemsCriticos++;
+
+                // Gráfico
+                const cat = productoDetalle.categoria || 'Otros';
+                if (!categoriasCount[cat]) categoriasCount[cat] = 0;
+                categoriasCount[cat] += valorFila;
+
+                // Render
+                let badge = '<span class="badge bg-success-subtle text-success border border-0">OK</span>';
+                if (item.stock === 0) badge = '<span class="badge bg-danger-subtle text-danger border border-0">AGOTADO</span>';
+                else if (item.stock <= item.punto_reorden) badge = '<span class="badge bg-warning-subtle text-warning border border-0">BAJO</span>';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-4"><small class="text-muted fw-bold">${item.nombre_sucursal}</small></td>
+                        <td class="fw-bold text-dark">${productoDetalle.nombre}</td>
+                        <td><span class="badge bg-light text-secondary border fw-normal text-uppercase" style="font-size: 0.7rem;">${cat}</span></td>
+                        <td class="text-center fs-6 fw-bold">${item.stock}</td>
+                        <td class="text-end text-muted small font-monospace">$${costoUnit.toLocaleString('es-CL')}</td>
+                        <td class="text-end fw-bold text-primary font-monospace">$${valorFila.toLocaleString('es-CL')}</td>
+                        <td class="text-center pe-4">${badge}</td>
+                    </tr>
+                `;
+            }
+        });
+
+        actualizarKPIs(valorTotalInventario, itemsCriticos, categoriasCount);
+    }
+
+    function actualizarKPIs(valor, criticos, datosGrafico) {
+        document.getElementById('kpi-valor-total').textContent = '$' + valor.toLocaleString('es-CL');
+        document.getElementById('kpi-criticos').textContent = criticos;
+
+        const ctx = document.getElementById('chartCategorias').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+
+        chartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(datosGrafico),
+                datasets: [{
+                    data: Object.values(datosGrafico),
+                    backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                cutout: '75%'
+            }
+        });
+    }
+
+    function exportarReporteStock() {
+        const table = document.getElementById('tabla-stock-reporte');
+        let csv = [];
+        const rows = table.querySelectorAll("tr");
+        
+        for (let i = 0; i < rows.length; i++) {
+            let row = [], cols = rows[i].querySelectorAll("td, th");
+            for (let j = 0; j < cols.length; j++) {
+                let text = cols[j].innerText.replace('$', '').replace(/\./g, '');
+                row.push('"' + text + '"');
+            }
+            csv.push(row.join(","));
+        }
+
+        const csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
+        const link = document.createElement("a");
+        link.download = "valorizacion_stock.csv";
+        link.href = window.URL.createObjectURL(csvFile);
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+    }
+</script>
+{% endblock %}
