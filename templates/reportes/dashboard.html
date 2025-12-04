@@ -148,17 +148,105 @@
         align-items: center;
         justify-content: center;
     }
+    
+    .spinner-sm {
+        width: 1.5rem;
+        height: 1.5rem;
+        border-width: 0.2em;
+    }
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Configuración de Fechas
-    const hoy = new Date();
-    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-    const fmtDate = d => d.toISOString().split('T')[0];
-    
+    // =============================================================
+    // VERIFICACIÓN DE PLAN DE SUSCRIPCIÓN (OBLIGATORIA)
+    // =============================================================
     document.addEventListener('DOMContentLoaded', function() {
+        // 1. Verificar autenticación
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/login/';
+            return;
+        }
+
+        // 2. Obtener información del usuario
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        const rol = userInfo.rol;
+        const plan = userInfo.plan ? userInfo.plan.toLowerCase() : 'basico';
+        
+        // 3. Verificar si tiene permiso para ver reportes
+        // Reportes requieren: Rol Admin/Gerente + Plan Estándar o Premium
+        // (SuperAdmin siempre puede)
+        const isStandardOrHigher = plan === 'estandar' || plan === 'premium';
+        const isSuperAdmin = rol === 'super_admin';
+        const hasReportAccess = isSuperAdmin || 
+                               (['admin_cliente', 'gerente'].includes(rol) && isStandardOrHigher);
+
+        // 4. Si NO tiene acceso, mostrar mensaje y bloquear
+        if (!hasReportAccess) {
+            document.querySelector('.main-container').innerHTML = `
+                <div class="row justify-content-center mt-5">
+                    <div class="col-md-8 col-lg-6">
+                        <div class="card border-0 shadow-lg text-center">
+                            <div class="card-body p-5">
+                                <div class="icon-shape bg-warning-subtle text-warning rounded-circle mx-auto mb-4" style="width: 80px; height: 80px;">
+                                    <i class="bi bi-lock-fill fs-2"></i>
+                                </div>
+                                <h3 class="fw-bold text-dark mb-3">Función no disponible</h3>
+                                <p class="text-muted mb-4">
+                                    Los reportes avanzados requieren el <strong class="text-warning">Plan Estándar</strong> o superior.
+                                </p>
+                                
+                                <div class="alert alert-warning border-0 bg-warning-subtle text-start mb-4">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-info-circle-fill fs-5 me-3 text-warning"></i>
+                                        <div>
+                                            <strong>Tu plan actual: ${plan.toUpperCase()}</strong><br>
+                                            <small class="text-muted">Actualiza tu suscripción para desbloquear reportes detallados, análisis de ventas y exportación de datos.</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex gap-3 justify-content-center">
+                                    <a href="/" class="btn btn-primary">
+                                        <i class="bi bi-arrow-left me-2"></i> Volver al inicio
+                                    </a>
+                                    <button class="btn btn-outline-warning" onclick="mostrarPlanes()">
+                                        <i class="bi bi-gem me-2"></i> Ver planes
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Función para mostrar planes
+            window.mostrarPlanes = function() {
+                alert('Aquí iría la página de planes de suscripción\n\nPlanes disponibles:\n\n• BÁSICO: POS e inventario básico\n• ESTÁNDAR: + Reportes avanzados\n• PREMIUM: + E-commerce y múltiples sucursales');
+            };
+            
+            return; // Detener ejecución del resto del código
+        }
+
+        // 5. Si SÍ tiene acceso, continuar con el código normal
+        // Mostrar badge del plan en el título
+        const tituloPrincipal = document.querySelector('h2');
+        if (tituloPrincipal && plan !== 'basico') {
+            const badgeColor = plan === 'premium' ? 'bg-success' : 'bg-warning';
+            tituloPrincipal.innerHTML = `Dashboard de Gestión <span class="badge ${badgeColor} ms-2">${plan.toUpperCase()}</span>`;
+        }
+
+        // =============================================================
+        // CÓDIGO ORIGINAL DEL DASHBOARD DE REPORTES
+        // =============================================================
+        
+        // Configuración de Fechas
+        const hoy = new Date();
+        const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        const fmtDate = d => d.toISOString().split('T')[0];
+        
         const fechaStr = hoy.toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         
         const elFecha = document.getElementById('fecha-actual');
@@ -173,6 +261,7 @@
         cargarDatosIniciales();
     });
 
+    // Función para cargar datos iniciales
     async function cargarDatosIniciales() {
         // Usamos la variable 'token' que viene de base.html
         try {
@@ -188,10 +277,15 @@
             }
 
             // 2. Ventas Mes
+            // CORRECCIÓN: Calcular fechas dentro de la función
+            const hoy = new Date();
+            const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            const fmtDate = d => d.toISOString().split('T')[0];
+            
             const resVentas = await fetch(`/api/ventas/?fecha_desde=${fmtDate(primerDiaMes)}&fecha_hasta=${fmtDate(hoy)}`, { headers: { 'Authorization': `Bearer ${token}` } });
             const dataVentas = await resVentas.json();
             const listaVentas = dataVentas.results || dataVentas; 
-            const totalMonto = listaVentas.reduce((sum, v) => sum + parseFloat(v.total), 0);
+            const totalMonto = listaVentas.reduce((sum, v) => sum + parseFloat(v.total || 0), 0);
             
             const elTotalVentas = document.getElementById('totalVentas');
             const elTotalTrans = document.getElementById('totalTransacciones');
@@ -200,30 +294,76 @@
             if(elTotalTrans) elTotalTrans.textContent = dataVentas.count || listaVentas.length;
 
             // 3. Stock
-            const resStock = await fetch('/api/reportes/?tipo=stock', { headers: { 'Authorization': `Bearer ${token}` } });
-            const dataStock = await resStock.json();
-            if (dataStock.reporte_stock) {
-                const totalBajo = dataStock.reporte_stock.reduce((sum, s) => sum + s.bajo_stock, 0);
-                const totalAgotado = dataStock.reporte_stock.reduce((sum, s) => sum + s.agotado, 0);
-                const totalProblemas = totalBajo + totalAgotado;
-                
-                const elBajo = document.getElementById('totalBajoStock');
-                if(elBajo) {
-                    elBajo.textContent = totalProblemas;
-                    if(totalProblemas > 0) elBajo.classList.add('text-danger');
+            try {
+                const resStock = await fetch('/api/reportes/?tipo=stock', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (resStock.ok) {
+                    const dataStock = await resStock.json();
+                    if (dataStock.reporte_stock) {
+                        const totalBajo = dataStock.reporte_stock.reduce((sum, s) => sum + (s.bajo_stock || 0), 0);
+                        const totalAgotado = dataStock.reporte_stock.reduce((sum, s) => sum + (s.agotado || 0), 0);
+                        const totalProblemas = totalBajo + totalAgotado;
+                        
+                        const elBajo = document.getElementById('totalBajoStock');
+                        if(elBajo) {
+                            elBajo.textContent = totalProblemas;
+                            if(totalProblemas > 0) elBajo.classList.add('text-danger');
+                        }
+                    }
+                }
+            } catch (stockError) {
+                console.log('Usando endpoint alternativo para stock');
+                // Si falla, intentar con inventario básico
+                const resInventario = await fetch('/api/inventario/', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (resInventario.ok) {
+                    const inventarioData = await resInventario.json();
+                    const listaInventario = inventarioData.results || inventarioData;
+                    const bajoStock = listaInventario.filter(item => 
+                        (item.stock || 0) <= (item.punto_reorden || 10)
+                    ).length;
+                    
+                    const elBajo = document.getElementById('totalBajoStock');
+                    if(elBajo) {
+                        elBajo.textContent = bajoStock;
+                        if(bajoStock > 0) elBajo.classList.add('text-danger');
+                    }
                 }
             }
 
             // 4. Ordenes
-            const resOrdenes = await fetch('/api/ordenes/?estado=pendiente', { headers: { 'Authorization': `Bearer ${token}` } });
-            const dataOrdenes = await resOrdenes.json();
-            // Aquí está la corrección que hicimos antes:
-            const elOrdenes = document.getElementById('totalOrdenes');
-            // Cuenta si es lista o paginación
-            const cantidad = dataOrdenes.count || (dataOrdenes.results ? dataOrdenes.results.length : (Array.isArray(dataOrdenes) ? dataOrdenes.length : 0));
-            if(elOrdenes) elOrdenes.textContent = cantidad;
+            try {
+                const resOrdenes = await fetch('/api/ordenes/?estado=pendiente', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (resOrdenes.ok) {
+                    const dataOrdenes = await resOrdenes.json();
+                    const listaOrdenes = dataOrdenes.results || dataOrdenes;
+                    const cantidad = listaOrdenes.length;
+                    
+                    const elOrdenes = document.getElementById('totalOrdenes');
+                    if(elOrdenes) {
+                        elOrdenes.textContent = cantidad;
+                        if (cantidad > 0) {
+                            elOrdenes.classList.add('text-warning');
+                        }
+                    }
+                } else if (resOrdenes.status === 403) {
+                    // No tiene plan premium
+                    document.getElementById('totalOrdenes').textContent = 'Premium';
+                    document.getElementById('totalOrdenes').classList.add('text-muted');
+                }
+            } catch (ordenError) {
+                document.getElementById('totalOrdenes').textContent = '-';
+            }
 
-        } catch (error) { console.error('Error cargando dashboard:', error); }
+        } catch (error) { 
+            console.error('Error cargando dashboard:', error);
+            // Mostrar error amigable
+            if (error.message.includes('403')) {
+                document.getElementById('totalVentas').textContent = 'Sin acceso';
+                document.getElementById('totalVentas').classList.add('text-muted');
+            } else {
+                document.getElementById('totalVentas').textContent = 'Error';
+                document.getElementById('totalVentas').classList.add('text-danger');
+            }
+        }
     }
 
     async function generarReporteVentas() {
@@ -237,6 +377,20 @@
             const res = await fetch(`/api/ventas/?fecha_desde=${desde}&fecha_hasta=${hasta}`, { 
                 headers: { 'Authorization': `Bearer ${token}` } 
             });
+            
+            if (res.status === 403) {
+                div.innerHTML = `
+                    <div class="d-flex h-100 flex-column align-items-center justify-content-center text-center p-4">
+                        <div class="icon-shape bg-warning-subtle text-warning rounded-circle mb-3" style="width: 60px; height: 60px;">
+                            <i class="bi bi-lock fs-4"></i>
+                        </div>
+                        <p class="text-muted mb-0">No tienes permiso para acceder a estos datos.</p>
+                        <small class="text-warning">Se requiere Plan Estándar o superior</small>
+                    </div>
+                `;
+                return;
+            }
+            
             const data = await res.json();
             const ventas = data.results || data;
 
@@ -259,17 +413,16 @@
             
             let totalPeriodo = 0;
             ventas.forEach(v => {
-                totalPeriodo += parseFloat(v.total);
+                totalPeriodo += parseFloat(v.total || 0);
                 html += `
                     <tr>
                         <td>${new Date(v.creado_en).toLocaleDateString('es-CL')}</td>
-                        <td class="text-truncate" style="max-width: 120px;">${v.nombre_sucursal}</td>
-                        <td class="text-end fw-bold">$${parseFloat(v.total).toLocaleString('es-CL')}</td>
+                        <td class="text-truncate" style="max-width: 120px;">${v.nombre_sucursal || 'Sin sucursal'}</td>
+                        <td class="text-end fw-bold">$${parseFloat(v.total || 0).toLocaleString('es-CL')}</td>
                     </tr>
                 `;
             });
 
-            // --- AQUÍ AGREGAMOS EL TOTAL AL FINAL DE LA TABLA ---
             html += `
                     </tbody>
                     <tfoot class="table-light sticky-bottom border-top">
@@ -280,11 +433,13 @@
                     </tfoot>
                 </table>
             `;
-            // -----------------------------------------------------
 
             div.innerHTML = html;
 
-        } catch (error) { div.innerHTML = 'Error'; }
+        } catch (error) { 
+            console.error('Error generando reporte:', error);
+            div.innerHTML = '<div class="d-flex h-100 align-items-center justify-content-center text-danger small">Error al cargar datos</div>';
+        }
     }
 
     async function generarReporteStock() {
@@ -297,6 +452,20 @@
 
         try {
             const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            
+            if (res.status === 403) {
+                div.innerHTML = `
+                    <div class="d-flex h-100 flex-column align-items-center justify-content-center text-center p-4">
+                        <div class="icon-shape bg-warning-subtle text-warning rounded-circle mb-3" style="width: 60px; height: 60px;">
+                            <i class="bi bi-lock fs-4"></i>
+                        </div>
+                        <p class="text-muted mb-0">No tienes permiso para acceder a estos datos.</p>
+                        <small class="text-warning">Se requiere Plan Estándar o superior</small>
+                    </div>
+                `;
+                return;
+            }
+            
             const items = await res.json();
             const lista = items.results || items;
 
@@ -323,13 +492,12 @@
                 if (i.stock === 0) { badgeClass = 'bg-danger-subtle text-danger'; texto = 'AGOTADO'; }
                 else if (i.stock <= i.punto_reorden) { badgeClass = 'bg-warning-subtle text-warning'; texto = 'BAJO'; }
 
-                // Manejo seguro de nombres
                 const nomProd = i.nombre_producto || `Prod ${i.producto}`;
 
                 html += `
                     <tr>
                         <td class="text-truncate" style="max-width: 150px;" title="${nomProd}">${nomProd}</td>
-                        <td class="text-center fw-bold">${i.stock}</td>
+                        <td class="text-center fw-bold">${i.stock || 0}</td>
                         <td class="text-center"><span class="badge ${badgeClass} border border-0">${texto}</span></td>
                     </tr>
                 `;
@@ -337,7 +505,10 @@
             html += '</tbody></table>';
             div.innerHTML = html;
 
-        } catch (error) { div.innerHTML = 'Error'; }
+        } catch (error) { 
+            console.error('Error generando stock:', error);
+            div.innerHTML = '<div class="d-flex h-100 align-items-center justify-content-center text-danger small">Error al cargar datos</div>';
+        }
     }
 
     function exportarTablaCSV(tableId, filename) {
@@ -358,6 +529,11 @@
         link.style.display = "none";
         document.body.appendChild(link);
         link.click();
+    }
+
+    // Helper function para formatear fechas
+    function fmtDate(d) {
+        return d.toISOString().split('T')[0];
     }
 </script>
 {% endblock %}

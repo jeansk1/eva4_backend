@@ -16,7 +16,7 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
-    'django.contrib.sessions',
+    'django.contrib.sessions',  # 👈 Esto ya está
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
@@ -30,13 +30,14 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',  # 👈 IMPORTANTE
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.ForceSessionMiddleware',  # 👈 NUESTRO MIDDLEWARE PERSONALIZADO
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -103,6 +104,7 @@ AUTH_USER_MODEL = 'core.Usuario'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',  # 👈 AÑADE ESTO
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -114,4 +116,43 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
+# ====== CONFIGURACIÓN DE SESIONES ======
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_NAME = 'sessionid'
+SESSION_COOKIE_HTTPONLY = True  # IMPORTANTE: True para seguridad
+SESSION_COOKIE_SECURE = False    # False en desarrollo, True en producción con HTTPS
+SESSION_COOKIE_SAMESITE = 'Lax'  # 'Lax' permite cookies en navegaciones entre sitios
+SESSION_COOKIE_AGE = 1209600     # 2 semanas en segundos
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # IMPORTANTE: No expirar al cerrar navegador
+
+# ====== CONFIGURACIÓN CORS ======
+CORS_ALLOW_ALL_ORIGINS = True    # En desarrollo, en producción restringe
+CORS_ALLOW_CREDENTIALS = True    # 👈 ESTO ES CLAVE: Permite enviar cookies
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://localhost:3000",     # Si usas React/Vue
+    "http://127.0.0.1:3000",
+]
+
+# ====== CONFIGURACIÓN CSRF ======
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_HTTPONLY = False    # Para que JavaScript pueda leer si es necesario
+CSRF_COOKIE_SECURE = False
+CSRF_USE_SESSIONS = False
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
+# ====== CONFIGURACIÓN REST FRAMEWORK ======
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',  # 👈 PARA USUARIOS ANÓNIMOS
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',  # 👈 PERMITIR ACCESO ANÓNIMO
+    ),
+}

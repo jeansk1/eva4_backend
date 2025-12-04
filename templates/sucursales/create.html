@@ -16,8 +16,52 @@
             </a>
         </div>
 
+        <!-- Card de información del plan y límites -->
+        <div class="card border-0 shadow-sm mb-4" id="card-plan-info">
+            <div class="card-header bg-white border-0">
+                <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-gem me-2"></i> Información de tu Plan</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="icon-shape bg-primary-subtle text-primary rounded-3 me-3">
+                                <i class="bi bi-shop-window fs-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0 fw-bold" id="plan-actual-text">Plan Básico</h5>
+                                <small class="text-muted" id="limite-sucursales-text">1 sucursal permitida</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="icon-shape bg-info-subtle text-info rounded-3 me-3">
+                                <i class="bi bi-check2-circle fs-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0 fw-bold" id="contador-sucursales">0/1 sucursales</h5>
+                                <small class="text-muted" id="estado-limite-text">Puedes crear una nueva sucursal</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
+                <!-- Alerta de límite alcanzado (oculta inicialmente) -->
+                <div class="alert alert-warning border-0 d-none mb-4" id="alerta-limite">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
+                        <div>
+                            <strong>Límite de sucursales alcanzado</strong><br>
+                            <span id="mensaje-limite">Tu plan actual no permite crear más sucursales.</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="alert alert-info border-0 d-flex align-items-center mb-4">
                     <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
                     <div>
@@ -34,14 +78,14 @@
                             <label for="nombre" class="form-label fw-bold">Nombre de la Sucursal</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light"><i class="bi bi-building"></i></span>
-                                <input type="text" class="form-control" id="nombre" required placeholder="Ej: Casa Matriz - Centro">
+                                <input type="text" class="form-control" id="nombre" required placeholder="Ej: Casa Matriz - Centro" disabled>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <label for="telefono" class="form-label fw-bold">Teléfono</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light"><i class="bi bi-telephone"></i></span>
-                                <input type="tel" class="form-control" id="telefono" required placeholder="+56 45 2...">
+                                <input type="tel" class="form-control" id="telefono" required placeholder="+56 45 2..." disabled>
                             </div>
                         </div>
                     </div>
@@ -51,17 +95,17 @@
                         <label for="email" class="form-label fw-bold">Correo Electrónico</label>
                         <div class="input-group">
                             <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
-                            <input type="email" class="form-control" id="email" required placeholder="sucursal.centro@empresa.com">
+                            <input type="email" class="form-control" id="email" required placeholder="sucursal.centro@empresa.com" disabled>
                         </div>
                     </div>
 
                     <div class="mb-4">
                         <label for="direccion" class="form-label fw-bold">Dirección Física</label>
-                        <textarea class="form-control" id="direccion" rows="3" required placeholder="Calle, Número, Comuna..."></textarea>
+                        <textarea class="form-control" id="direccion" rows="3" required placeholder="Calle, Número, Comuna..." disabled></textarea>
                     </div>
 
                     <div class="d-flex justify-content-end pt-3 border-top">
-                        <button type="submit" class="btn btn-primary px-5 shadow-sm btn-lg">
+                        <button type="submit" class="btn btn-primary px-5 shadow-sm btn-lg" id="btn-crear" disabled>
                             <i class="bi bi-check-lg me-2"></i> Crear Sucursal
                         </button>
                     </div>
@@ -73,23 +117,121 @@
 
 <style>
     .ls-1 { letter-spacing: 1px; }
+    
+    .icon-shape {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .disabled-form {
+        opacity: 0.6;
+        pointer-events: none;
+    }
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+        // 1. Verificar autenticación
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/login/';
+            return;
+        }
+
+        // 2. Obtener información del usuario
         const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
-        if (userInfo.rol === 'vendedor' || userInfo.rol === 'gerente') {
+        const rol = userInfo.rol;
+        const plan = userInfo.plan ? userInfo.plan.toLowerCase() : 'basico';
+        
+        // 3. Verificar permisos básicos
+        if (rol === 'vendedor' || rol === 'gerente') {
             alert('⛔ Acceso restringido: No tiene permisos para crear sucursales.');
+            window.location.href = '/sucursales/';
+            return;
+        }
+
+        // 4. Definir límites por plan
+        const limitesPorPlan = {
+            'basico': 1,
+            'estandar': 3,
+            'premium': 9999 // Prácticamente ilimitado
+        };
+        
+        const limiteActual = limitesPorPlan[plan] || 1;
+        const esPlanPremium = plan === 'premium';
+        
+        // 5. Actualizar información del plan en la UI
+        document.getElementById('plan-actual-text').textContent = `Plan ${plan.toUpperCase()}`;
+        document.getElementById('limite-sucursales-text').textContent = 
+            esPlanPremium ? 'Sucursales ilimitadas' : `${limiteActual} sucursal${limiteActual !== 1 ? 'es' : ''} permitida${limiteActual !== 1 ? 's' : ''}`;
+        
+        // 6. Contar sucursales existentes
+        try {
+            const response = await fetch('/api/sucursales/', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Error al cargar sucursales');
+            
+            const data = await response.json();
+            const sucursales = data.results || data;
+            const totalSucursales = sucursales.length;
+            
+            // 7. Actualizar contador
+            document.getElementById('contador-sucursales').textContent = `${totalSucursales}/${limiteActual} sucursales`;
+            
+            // 8. Verificar si puede crear más sucursales
+            const puedeCrear = esPlanPremium || totalSucursales < limiteActual;
+            
+            if (puedeCrear) {
+                // Habilitar formulario
+                document.getElementById('estado-limite-text').textContent = 
+                    esPlanPremium ? 'Puedes crear sucursales ilimitadas' : `Puedes crear ${limiteActual - totalSucursales} sucursal(es) más`;
+                
+                // Habilitar inputs y botón
+                document.querySelectorAll('#form-create-sucursal input, #form-create-sucursal textarea').forEach(input => {
+                    input.disabled = false;
+                });
+                document.getElementById('btn-crear').disabled = false;
+                
+            } else {
+                // Mostrar alerta de límite alcanzado
+                document.getElementById('alerta-limite').classList.remove('d-none');
+                document.getElementById('mensaje-limite').textContent = 
+                    `Tu plan ${plan.toUpperCase()} solo permite ${limiteActual} sucursal${limiteActual !== 1 ? 'es' : ''}.`;
+                document.getElementById('estado-limite-text').textContent = 'Límite alcanzado';
+                document.getElementById('estado-limite-text').classList.add('text-danger');
+                
+                // Cambiar color del card del plan
+                document.getElementById('card-plan-info').classList.add('border-warning');
+            }
+            
+            // 9. Cambiar color del plan en el card
+            const planCard = document.getElementById('card-plan-info');
+            if (plan === 'premium') {
+                planCard.classList.add('border-success', 'border-2');
+            } else if (plan === 'estandar') {
+                planCard.classList.add('border-warning', 'border-2');
+            } else {
+                planCard.classList.add('border-primary', 'border-2');
+            }
+            
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al verificar límites de sucursales. Intente nuevamente.');
             window.location.href = '/sucursales/';
         }
     });
 
+    // Manejo del formulario
     document.getElementById('form-create-sucursal').addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        // TOKEN SEGURO (Local)
         const token = localStorage.getItem('access_token');
         const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
 
@@ -107,10 +249,10 @@
         };
 
         // Visual Feedback
-        const btn = document.querySelector('button[type="submit"]');
+        const btn = document.getElementById('btn-crear');
         const originalText = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Creando sucursal...';
 
         try {
             const response = await fetch('/api/sucursales/', {
@@ -129,8 +271,20 @@
                 const data = await response.json();
                 let errorMsg = 'Error al crear sucursal:\n';
                 
-                if (data.detail) errorMsg += `- ${data.detail}\n`;
-                else errorMsg += JSON.stringify(data);
+                // Manejo especial para error de límite
+                if (response.status === 403 && data.detail && data.detail.includes('Límite')) {
+                    errorMsg = '❌ Límite de sucursales alcanzado.\n\n' +
+                              'Tu plan actual no permite crear más sucursales.\n' +
+                              'Contacta al administrador para actualizar tu plan.';
+                    
+                    // Mostrar alerta
+                    document.getElementById('alerta-limite').classList.remove('d-none');
+                    document.getElementById('alerta-limite').scrollIntoView({ behavior: 'smooth' });
+                } else if (data.detail) {
+                    errorMsg += `- ${data.detail}\n`;
+                } else {
+                    errorMsg += JSON.stringify(data);
+                }
                 
                 alert(errorMsg);
                 btn.disabled = false;

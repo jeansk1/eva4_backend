@@ -1,0 +1,417 @@
+{% extends 'base.html' %}
+
+{% block title %}Actualizar Plan - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <div>
+                <h6 class="text-uppercase text-muted small fw-bold ls-1">Administración</h6>
+                <h2 class="fw-bold text-dark"><i class="bi bi-arrow-up-circle me-2"></i>Actualizar Mi Plan</h2>
+                <p class="text-muted mb-0">Elige el plan que mejor se adapte a las necesidades de tu negocio.</p>
+            </div>
+            <a href="/planes/info/" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Volver
+            </a>
+        </div>
+
+        <!-- Plan Actual -->
+        <div class="card border-0 shadow-sm mb-5">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-info-circle me-2"></i>Tu Plan Actual</h5>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center">
+                            <div class="icon-shape bg-primary-subtle text-primary rounded-3 me-4" style="width: 60px; height: 60px;">
+                                <i class="bi bi-gem fs-3"></i>
+                            </div>
+                            <div>
+                                <h3 class="fw-bold text-dark mb-1" id="plan-actual-nombre">Plan Básico</h3>
+                                <p class="text-muted mb-0" id="plan-actual-desc">Funcionalidades esenciales para comenzar</p>
+                                <div class="mt-2">
+                                    <span class="badge bg-primary" id="plan-actual-badge">ACTUAL</span>
+                                    <span class="badge bg-light text-dark border ms-2">Renovación: <span id="plan-actual-renovacion">15/02/2024</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <h2 class="fw-bold text-primary" id="plan-actual-precio">$29.990</h2>
+                        <small class="text-muted">+IVA / mensual</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Opciones de Planes -->
+        <div class="row g-4 mb-5" id="opciones-planes">
+            <!-- Plan Básico -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100 plan-option" data-plan="basico">
+                    <div class="card-header bg-primary text-white text-center py-4 border-0">
+                        <h4 class="fw-bold mb-2">Básico</h4>
+                        <div class="display-4 fw-bold mb-0">$29.990</div>
+                        <small class="opacity-75">+IVA / mensual</small>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-4">
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> 1 sucursal</li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> Usuario administrador</li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> Ventas POS</li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> Inventario básico</li>
+                            <li class="mb-3"><i class="bi bi-x-circle-fill text-danger me-2"></i> Reportes avanzados</li>
+                            <li class="mb-3"><i class="bi bi-x-circle-fill text-danger me-2"></i> E-commerce</li>
+                            <li class="mb-3"><i class="bi bi-x-circle-fill text-danger me-2"></i> Múltiples usuarios</li>
+                        </ul>
+                        <button class="btn btn-outline-primary w-100" onclick="seleccionarPlan('basico')">
+                            Seleccionar Básico
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plan Estándar -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-lg h-100 plan-option border-warning border-2" data-plan="estandar">
+                    <div class="card-header bg-warning text-dark text-center py-4 border-0 position-relative">
+                        <span class="badge bg-danger position-absolute top-0 start-50 translate-middle mt-2 px-3 py-2">
+                            MÁS POPULAR
+                        </span>
+                        <h4 class="fw-bold mb-2">Estándar</h4>
+                        <div class="display-4 fw-bold mb-0">$59.990</div>
+                        <small class="opacity-75">+IVA / mensual</small>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-4">
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> <strong>Hasta 3 sucursales</strong></li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> <strong>Hasta 5 usuarios</strong></li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> Ventas POS</li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> Inventario completo</li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> <strong>Reportes avanzados</strong></li>
+                            <li class="mb-3"><i class="bi bi-x-circle-fill text-danger me-2"></i> E-commerce</li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> Soporte prioritario</li>
+                        </ul>
+                        <button class="btn btn-warning w-100 fw-bold" onclick="seleccionarPlan('estandar')">
+                            <i class="bi bi-star-fill me-2"></i> Seleccionar Estándar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plan Premium -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100 plan-option" data-plan="premium">
+                    <div class="card-header bg-success text-white text-center py-4 border-0">
+                        <h4 class="fw-bold mb-2">Premium</h4>
+                        <div class="display-4 fw-bold mb-0">$99.990</div>
+                        <small class="opacity-75">+IVA / mensual</small>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-4">
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> <strong>Sucursales ilimitadas</strong></li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> <strong>Usuarios ilimitados</strong></li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> Ventas POS</li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> Inventario completo</li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> Reportes avanzados</li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> <strong>E-commerce completo</strong></li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> Soporte 24/7</li>
+                        </ul>
+                        <button class="btn btn-outline-success w-100" onclick="seleccionarPlan('premium')">
+                            Seleccionar Premium
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumen del Cambio -->
+        <div class="card border-0 shadow-lg mb-5 d-none" id="resumen-cambio">
+            <div class="card-header bg-primary text-white border-0">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-check-circle me-2"></i> Resumen del Cambio</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-uppercase text-muted small fw-bold mb-3">Cambio de Plan</h6>
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="icon-shape bg-primary-subtle text-primary rounded-3 me-3">
+                                <i class="bi bi-arrow-right-circle fs-3"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold text-dark mb-1" id="resumen-desde">Plan Básico</h5>
+                                <small class="text-muted">Plan actual</small>
+                            </div>
+                            <div class="mx-4">
+                                <i class="bi bi-arrow-right fs-2 text-muted"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold text-success mb-1" id="resumen-hacia">Plan Estándar</h5>
+                                <small class="text-muted">Nuevo plan</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-uppercase text-muted small fw-bold mb-3">Detalles de Facturación</h6>
+                        <div class="bg-light p-3 rounded-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Nuevo plan mensual</span>
+                                <span class="fw-bold" id="resumen-nuevo-precio">$59.990</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>IVA (19%)</span>
+                                <span id="resumen-iva">$11.398</span>
+                            </div>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between fw-bold">
+                                <span>Total mensual</span>
+                                <span class="text-success" id="resumen-total">$71.388</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info border-0 mt-4">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+                        <div>
+                            <strong>Cambio inmediato</strong>
+                            <p class="mb-0 small">El cambio de plan se aplica inmediatamente. Tu próxima factura reflejará el nuevo valor.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <button class="btn btn-primary btn-lg px-5 me-3" onclick="confirmarCambio()">
+                        <i class="bi bi-check-circle me-2"></i> Confirmar Cambio
+                    </button>
+                    <button class="btn btn-outline-secondary btn-lg" onclick="cancelarCambio()">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    
+    .icon-shape {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .plan-option {
+        transition: transform 0.3s, box-shadow 0.3s;
+        cursor: pointer;
+    }
+    
+    .plan-option:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 1rem 3rem rgba(0,0,0,0.175) !important;
+    }
+    
+    .plan-option.selected {
+        border: 3px solid #0d6efd !important;
+        transform: translateY(-5px);
+    }
+    
+    .list-unstyled li {
+        padding-left: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let planActual = 'basico';
+    let planSeleccionado = null;
+    let precios = {
+        'basico': { precio: 29990, iva: 5698, total: 35688 },
+        'estandar': { precio: 59990, iva: 11398, total: 71388 },
+        'premium': { precio: 99990, iva: 18998, total: 118988 }
+    };
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. Obtener información del usuario
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        planActual = userInfo.plan ? userInfo.plan.toLowerCase() : 'basico';
+        
+        // 2. Configurar plan actual
+        configurarPlanActual(planActual);
+        
+        // 3. Marcar plan actual como seleccionado inicialmente
+        seleccionarPlan(planActual);
+    });
+    
+    function configurarPlanActual(plan) {
+        const config = {
+            'basico': {
+                nombre: 'Plan Básico',
+                desc: 'Funcionalidades esenciales para comenzar',
+                precio: '$29.990',
+                renovacion: '15/02/2024',
+                color: 'primary'
+            },
+            'estandar': {
+                nombre: 'Plan Estándar',
+                desc: 'Ideal para negocios en crecimiento',
+                precio: '$59.990',
+                renovacion: '15/02/2024',
+                color: 'warning'
+            },
+            'premium': {
+                nombre: 'Plan Premium',
+                desc: 'Solución completa para empresas establecidas',
+                precio: '$99.990',
+                renovacion: '15/02/2024',
+                color: 'success'
+            }
+        };
+        
+        const planConfig = config[plan] || config.basico;
+        
+        // Actualizar UI
+        document.getElementById('plan-actual-nombre').textContent = planConfig.nombre;
+        document.getElementById('plan-actual-desc').textContent = planConfig.desc;
+        document.getElementById('plan-actual-precio').textContent = planConfig.precio;
+        document.getElementById('plan-actual-renovacion').textContent = planConfig.renovacion;
+        
+        const badge = document.getElementById('plan-actual-badge');
+        badge.className = `badge bg-${planConfig.color}`;
+        badge.textContent = plan === planActual ? 'ACTUAL' : 'SELECCIONADO';
+        
+        // Resaltar card del plan actual
+        document.querySelectorAll('.plan-option').forEach(card => {
+            if (card.dataset.plan === plan) {
+                card.classList.add('selected');
+            }
+        });
+    }
+    
+    function seleccionarPlan(plan) {
+        planSeleccionado = plan;
+        
+        // 1. Quitar selección anterior
+        document.querySelectorAll('.plan-option').forEach(card => {
+            card.classList.remove('selected');
+            card.classList.remove('border-primary');
+        });
+        
+        // 2. Marcar seleccionado
+        const cardSeleccionado = document.querySelector(`[data-plan="${plan}"]`);
+        if (cardSeleccionado) {
+            cardSeleccionado.classList.add('selected');
+            cardSeleccionado.classList.add('border-primary');
+        }
+        
+        // 3. Si es diferente al actual, mostrar resumen
+        if (plan !== planActual) {
+            mostrarResumenCambio(plan);
+        } else {
+            document.getElementById('resumen-cambio').classList.add('d-none');
+        }
+    }
+    
+    function mostrarResumenCambio(nuevoPlan) {
+        const configActual = {
+            'basico': { nombre: 'Plan Básico', precio: 29990 },
+            'estandar': { nombre: 'Plan Estándar', precio: 59990 },
+            'premium': { nombre: 'Plan Premium', precio: 99990 }
+        };
+        
+        const configNuevo = {
+            'basico': { nombre: 'Plan Básico', precio: 29990 },
+            'estandar': { nombre: 'Plan Estándar', precio: 59990 },
+            'premium': { nombre: 'Plan Premium', precio: 99990 }
+        };
+        
+        // Actualizar resumen
+        document.getElementById('resumen-desde').textContent = configActual[planActual].nombre;
+        document.getElementById('resumen-hacia').textContent = configNuevo[nuevoPlan].nombre;
+        document.getElementById('resumen-hacia').className = `fw-bold text-success mb-1`;
+        
+        // Actualizar precios
+        const precioInfo = precios[nuevoPlan];
+        document.getElementById('resumen-nuevo-precio').textContent = `$${precioInfo.precio.toLocaleString('es-CL')}`;
+        document.getElementById('resumen-iva').textContent = `$${precioInfo.iva.toLocaleString('es-CL')}`;
+        document.getElementById('resumen-total').textContent = `$${precioInfo.total.toLocaleString('es-CL')}`;
+        
+        // Mostrar resumen
+        document.getElementById('resumen-cambio').classList.remove('d-none');
+        document.getElementById('resumen-cambio').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    async function confirmarCambio() {
+        if (!planSeleccionado || planSeleccionado === planActual) {
+            alert('Por favor, selecciona un plan diferente al actual.');
+            return;
+        }
+        
+        const token = localStorage.getItem('access_token');
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        
+        // Confirmación
+        if (!confirm(`¿Estás seguro de cambiar al ${planSeleccionado.toUpperCase()}? Este cambio se aplicará inmediatamente.`)) {
+            return;
+        }
+        
+        // Simular cambio (en un sistema real, harías POST a la API)
+        const btn = document.querySelector('#resumen-cambio .btn-primary');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Procesando...';
+        
+        try {
+            // Aquí iría la llamada real a la API
+            // await fetch('/api/suscripcion/actualizar/', {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json',
+            //         'Authorization': `Bearer ${token}`
+            //     },
+            //     body: JSON.stringify({ nuevo_plan: planSeleccionado })
+            // });
+            
+            // Simular delay de red
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Actualizar en localStorage
+            userInfo.plan = planSeleccionado;
+            localStorage.setItem('user_info', JSON.stringify(userInfo));
+            
+            // Mostrar éxito
+            btn.className = 'btn btn-success btn-lg px-5 me-3';
+            btn.innerHTML = '<i class="bi bi-check-circle me-2"></i> ¡Cambio exitoso!';
+            
+            // Actualizar UI
+            planActual = planSeleccionado;
+            configurarPlanActual(planActual);
+            
+            // Redirigir después de 2 segundos
+            setTimeout(() => {
+                window.location.href = '/planes/info/';
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al cambiar el plan. Intenta nuevamente.');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+    
+    function cancelarCambio() {
+        document.getElementById('resumen-cambio').classList.add('d-none');
+        seleccionarPlan(planActual);
+    }
+</script>
+{% endblock %}

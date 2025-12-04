@@ -81,11 +81,129 @@
 
 {% block scripts %}
 <script>
-    let usuariosGlobal = [];
-
+    // =============================================================
+    // VERIFICACIÓN DE PLAN PREMIUM (OBLIGATORIA)
+    // =============================================================
     document.addEventListener('DOMContentLoaded', function() {
+        // 1. Verificar autenticación
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/login/';
+            return;
+        }
+
+        // 2. Obtener información del usuario
         const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        const rol = userInfo.rol;
+        const plan = userInfo.plan ? userInfo.plan.toLowerCase() : 'basico';
         
+        // 3. Verificar si tiene permiso para gestionar usuarios
+        // Gestión de usuarios requiere: Rol Admin + Plan Premium (o SuperAdmin)
+        const isPremium = plan === 'premium';
+        const isSuperAdmin = rol === 'super_admin';
+        const hasUserAccess = isSuperAdmin || (rol === 'admin_cliente' && isPremium);
+
+        // 4. Si NO tiene acceso, mostrar mensaje y bloquear
+        if (!hasUserAccess) {
+            document.querySelector('.main-container').innerHTML = `
+                <div class="row justify-content-center mt-5">
+                    <div class="col-md-8 col-lg-6">
+                        <div class="card border-0 shadow-lg text-center">
+                            <div class="card-body p-5">
+                                <div class="icon-shape bg-success-subtle text-success rounded-circle mx-auto mb-4" style="width: 80px; height: 80px;">
+                                    <i class="bi bi-people-fill fs-2"></i>
+                                </div>
+                                <h3 class="fw-bold text-dark mb-3">Gestión de Usuarios</h3>
+                                <p class="text-muted mb-4">
+                                    La gestión de múltiples usuarios requiere el <strong class="text-success">Plan Premium</strong>.
+                                </p>
+                                
+                                <div class="alert alert-success border-0 bg-success-subtle text-start mb-4">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-info-circle-fill fs-5 me-3 text-success"></i>
+                                        <div>
+                                            <strong>Tu plan actual: ${plan.toUpperCase()}</strong><br>
+                                            <small class="text-muted">Con el Plan Premium puedes administrar usuarios ilimitados y gestionar permisos.</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <div class="card border-0 bg-light h-100">
+                                            <div class="card-body text-center p-3">
+                                                <div class="icon-shape bg-primary-subtle text-primary rounded-circle mx-auto mb-2" style="width: 50px; height: 50px;">
+                                                    <i class="bi bi-person-fill fs-4"></i>
+                                                </div>
+                                                <h6 class="fw-bold mb-0">Plan Básico</h6>
+                                                <small class="text-muted">Solo administrador</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card border-0 bg-light h-100">
+                                            <div class="card-body text-center p-3">
+                                                <div class="icon-shape bg-warning-subtle text-warning rounded-circle mx-auto mb-2" style="width: 50px; height: 50px;">
+                                                    <i class="bi bi-people-fill fs-4"></i>
+                                                </div>
+                                                <h6 class="fw-bold mb-0">Plan Estándar</h6>
+                                                <small class="text-muted">Hasta 3 usuarios</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card border-0 bg-light h-100">
+                                            <div class="card-body text-center p-3">
+                                                <div class="icon-shape bg-success-subtle text-success rounded-circle mx-auto mb-2" style="width: 50px; height: 50px;">
+                                                    <i class="bi bi-person-plus-fill fs-4"></i>
+                                                </div>
+                                                <h6 class="fw-bold mb-0">Plan Premium</h6>
+                                                <small class="text-muted">Usuarios ilimitados</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex gap-3 justify-content-center">
+                                    <a href="/" class="btn btn-primary">
+                                        <i class="bi bi-arrow-left me-2"></i> Volver al inicio
+                                    </a>
+                                    <button class="btn btn-outline-success" onclick="mostrarPlanes()">
+                                        <i class="bi bi-gem me-2"></i> Actualizar a Premium
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Función para mostrar planes
+            window.mostrarPlanes = function() {
+                alert('Gestión de usuarios por plan:\n\n' +
+                      '• BÁSICO: Solo 1 usuario administrador\n' +
+                      '• ESTÁNDAR: Hasta 3 usuarios adicionales\n' +
+                      '• PREMIUM: Usuarios ilimitados\n\n' +
+                      'Contacta al administrador para cambiar tu plan.');
+            };
+            
+            return; // Detener ejecución
+        }
+
+        // 5. Si SÍ tiene acceso, continuar con el código normal
+        // Mostrar badge del plan en el título
+        const tituloPrincipal = document.querySelector('h2');
+        if (tituloPrincipal && plan !== 'basico') {
+            const badgeColor = plan === 'premium' ? 'bg-success' : plan === 'estandar' ? 'bg-warning' : 'bg-primary';
+            tituloPrincipal.innerHTML = `<i class="bi bi-people me-2"></i>Equipo de Trabajo <span class="badge ${badgeColor} ms-2">${plan.toUpperCase()}</span>`;
+        }
+
+        // =============================================================
+        // CÓDIGO ORIGINAL PARA CARGAR USUARIOS
+        // =============================================================
+        let usuariosGlobal = [];
+
+        // Ocultar botón de crear si es vendedor
         if (userInfo.rol === 'vendedor') {
             const btn = document.getElementById('btn-crear-usuario');
             if(btn) btn.style.display = 'none';

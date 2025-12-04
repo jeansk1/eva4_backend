@@ -6,14 +6,15 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h6 class="text-uppercase text-muted small fw-bold ls-1">E-commerce</h6>
-        <h2 class="fw-bold text-dark"><i class="bi bi-globe me-2"></i>Gestión de Pedidos</h2>
+        <h2 class="fw-bold text-dark"><i class="bi bi-globe me-2"></i>Gestión de Pedidos <span id="plan-badge" class="badge bg-success ms-2 d-none">PREMIUM</span></h2>
         <p class="text-muted mb-0 small">Administra los despachos y estados de órdenes online.</p>
     </div>
     <button class="btn btn-outline-primary shadow-sm rounded-pill px-4" onclick="cargarOrdenes()">
-        <i class="bi bi-arrow-clockwise me-2"></i>Actualizar Lista
+        <i class="bi bi-arrow-clockwise me-2"></i>Actualizar
     </button>
 </div>
 
+<!-- Filtros de Estado -->
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-2 bg-light rounded-3">
         <ul class="nav nav-pills nav-fill gap-2" id="pills-tab">
@@ -39,13 +40,27 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link fw-bold rounded-pill" href="#" onclick="filtrarEstado('', this)">
-                    Todos
+                    <i class="bi bi-list-ul me-1"></i> Todos
                 </a>
             </li>
         </ul>
     </div>
 </div>
 
+<!-- Contador de Órdenes -->
+<div class="alert alert-info border-0 shadow-sm mb-4" id="contador-ordenes" style="display: none;">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-info-circle-fill me-2"></i>
+            <span id="contador-texto">Cargando órdenes...</span>
+        </div>
+        <div>
+            <span class="badge bg-primary rounded-pill" id="contador-total">0</span>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Órdenes -->
 <div class="card border-0 shadow-sm overflow-hidden">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -69,6 +84,7 @@
     </div>
 </div>
 
+<!-- Modal para Ver/Editar Orden -->
 <div class="modal fade" id="modalOrden" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -162,102 +178,308 @@
         border: 1px solid #dee2e6;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
+    
+    /* Badge colors */
+    .badge-estado-pendiente { background-color: #ffc107; color: #000; }
+    .badge-estado-procesando { background-color: #0dcaf0; color: #000; }
+    .badge-estado-enviado { background-color: #0d6efd; color: #fff; }
+    .badge-estado-entregado { background-color: #198754; color: #fff; }
+    .badge-estado-cancelado { background-color: #dc3545; color: #fff; }
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script>
+    // =============================================================
+    // VARIABLES GLOBALES
+    // =============================================================
     let ordenesGlobal = [];
     let estadoFiltro = 'pendiente';
     let ordenActualId = null;
+    let usuarioInfo = {};
 
-    document.addEventListener('DOMContentLoaded', () => {
+    // =============================================================
+    // INICIALIZACIÓN
+    // =============================================================
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Verificar autenticación
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/login/';
+            return;
+        }
+
+        // 2. Obtener información del usuario
+        usuarioInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        
+        // Mostrar información del plan
+        actualizarUIUsuario();
+        
+        // 3. Verificar permisos
+        if (!verificarPermisos()) {
+            return;
+        }
+
+        // 4. Cargar órdenes
         cargarOrdenes();
     });
 
+    // =============================================================
+    // FUNCIONES DE UTILIDAD
+    // =============================================================
+    function actualizarUIUsuario() {
+        // Mostrar badge del plan
+        const badgeEl = document.getElementById('plan-badge');
+        if (usuarioInfo.plan) {
+            const plan = usuarioInfo.plan.toLowerCase();
+            badgeEl.textContent = plan.toUpperCase();
+            
+            // Colores según plan
+            if (plan === 'premium') {
+                badgeEl.className = 'badge bg-success ms-2';
+            } else if (plan === 'estandar') {
+                badgeEl.className = 'badge bg-warning ms-2';
+            } else {
+                badgeEl.className = 'badge bg-primary ms-2';
+            }
+            badgeEl.classList.remove('d-none');
+        }
+        
+        // Actualizar título si es premium
+        const tituloPrincipal = document.querySelector('h2');
+        if (usuarioInfo.plan === 'premium') {
+            const badgeHtml = '<span class="badge bg-success ms-2">PREMIUM</span>';
+            tituloPrincipal.innerHTML = `<i class="bi bi-globe me-2"></i>Gestión de Pedidos ${badgeHtml}`;
+        }
+    }
+
+    function verificarPermisos() {
+        const rol = usuarioInfo.rol;
+        const plan = usuarioInfo.plan ? usuarioInfo.plan.toLowerCase() : 'basico';
+        
+        // SuperAdmin siempre puede
+        if (rol === 'super_admin') {
+            return true;
+        }
+        
+        // AdminCliente/Gerente + Premium
+        if (['admin_cliente', 'gerente', 'vendedor'].includes(rol) && plan === 'premium') {
+            return true;
+        }
+        
+        // Si no tiene permisos, mostrar mensaje
+        mostrarSinPermisos();
+        return false;
+    }
+
+    function mostrarSinPermisos() {
+        document.querySelector('.main-container').innerHTML = `
+            <div class="row justify-content-center mt-5">
+                <div class="col-md-8 col-lg-6">
+                    <div class="card border-0 shadow-lg text-center">
+                        <div class="card-body p-5">
+                            <div class="icon-shape bg-warning-subtle text-warning rounded-circle mx-auto mb-4" style="width: 80px; height: 80px;">
+                                <i class="bi bi-shield-lock fs-2"></i>
+                            </div>
+                            <h3 class="fw-bold text-dark mb-3">Acceso Restringido</h3>
+                            <p class="text-muted mb-4">
+                                Necesitas el <strong class="text-success">Plan Premium</strong> para acceder a la gestión de pedidos web.
+                            </p>
+                            <div class="alert alert-info border-0 bg-info-subtle text-start mb-4">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-info-circle-fill fs-5 me-3 text-info"></i>
+                                    <div>
+                                        <strong>Tu plan actual: ${usuarioInfo.plan ? usuarioInfo.plan.toUpperCase() : 'BÁSICO'}</strong><br>
+                                        <small class="text-muted">Rol: ${usuarioInfo.rol || 'No asignado'}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <a href="/" class="btn btn-primary">
+                                <i class="bi bi-arrow-left me-2"></i> Volver al Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // =============================================================
+    // FUNCIONES PRINCIPALES
+    // =============================================================
     async function cargarOrdenes() {
         const token = localStorage.getItem('access_token');
         const tbody = document.getElementById('tabla-ordenes');
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+        const contador = document.getElementById('contador-ordenes');
+        const contadorTexto = document.getElementById('contador-texto');
+        const contadorTotal = document.getElementById('contador-total');
+        
+        // Mostrar loading
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-5">
+                    <div class="spinner-border text-primary mb-3"></div>
+                    <p class="text-muted mb-0">Cargando órdenes...</p>
+                </td>
+            </tr>
+        `;
+        
+        contadorTexto.textContent = 'Cargando órdenes...';
+        contadorTotal.textContent = '0';
+        contador.style.display = 'block';
 
         try {
-            const res = await fetch('/api/ordenes/', { headers: { 'Authorization': `Bearer ${token}` } });
+            const response = await fetch('/api/ordenes/', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                cache: 'no-cache'
+            });
+
+            // Verificar si hay error de autenticación
+            if (response.status === 401) {
+                throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+            }
+
+            // Verificar si hay error de permisos
+            if (response.status === 403) {
+                throw new Error('No tienes permisos para ver las órdenes. Requieres Plan Premium.');
+            }
+
+            // Verificar si la respuesta es OK
+            if (!response.ok) {
+                throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);
+            }
+
+            // Parsear la respuesta
+            const data = await response.json();
+
+            // Procesar datos (compatible con array directo o data.results)
+            if (Array.isArray(data)) {
+                ordenesGlobal = data;
+            } else if (data && Array.isArray(data.results)) {
+                ordenesGlobal = data.results;
+            } else if (data && typeof data === 'object') {
+                // Si es un objeto único, convertirlo a array
+                ordenesGlobal = [data];
+            } else {
+                ordenesGlobal = [];
+            }
+
+            // Actualizar contador
+            contadorTotal.textContent = ordenesGlobal.length;
+            contadorTexto.textContent = `Total de órdenes: ${ordenesGlobal.length}`;
             
-            if (!res.ok) throw new Error('Error API');
-            
-            const data = await res.json();
-            ordenesGlobal = data.results || data;
-            
+            if (ordenesGlobal.length === 0) {
+                contadorTexto.innerHTML = `<i class="bi bi-inbox me-2"></i> No hay órdenes registradas`;
+            }
+
+            // Aplicar filtro inicial
             aplicarFiltro();
 
         } catch (error) {
-            console.error(error);
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-5">Error de conexión</td></tr>';
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-danger">
+                        <i class="bi bi-exclamation-triangle-fill fs-1 d-block mb-3"></i>
+                        <h5 class="fw-bold">Error al cargar órdenes</h5>
+                        <p class="text-muted">${error.message}</p>
+                        <button class="btn btn-outline-primary mt-3" onclick="cargarOrdenes()">
+                            <i class="bi bi-arrow-clockwise me-2"></i> Reintentar
+                        </button>
+                    </td>
+                </tr>
+            `;
+            
+            contadorTexto.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Error: ${error.message}</span>`;
+            contadorTotal.textContent = '0';
         }
     }
 
     function filtrarEstado(estado, elementoNav) {
         estadoFiltro = estado;
         
+        // Actualizar navegación activa
         if (elementoNav) {
             document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
             elementoNav.classList.add('active');
         }
         
+        // Aplicar filtro
         aplicarFiltro();
     }
 
     function aplicarFiltro() {
         const tbody = document.getElementById('tabla-ordenes');
-        let filtradas = ordenesGlobal;
+        const contadorTotal = document.getElementById('contador-total');
+        
+        let filtradas = [...ordenesGlobal];
 
+        // Aplicar filtro por estado
         if (estadoFiltro) {
             filtradas = ordenesGlobal.filter(o => o.estado === estadoFiltro);
         }
         
+        // Ordenar por fecha (más reciente primero)
         filtradas.sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en));
 
+        // Actualizar contador
+        contadorTotal.textContent = filtradas.length;
+
+        // Limpiar tabla
         tbody.innerHTML = '';
 
+        // Mostrar mensaje si no hay órdenes
         if (filtradas.length === 0) {
+            const mensaje = estadoFiltro ? 
+                `No hay pedidos en estado: <strong>${estadoFiltro}</strong>` : 
+                'No hay pedidos registrados';
+            
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-center py-5 text-muted">
                         <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
-                        <p>No hay pedidos en estado: <strong>${estadoFiltro || 'Todos'}</strong></p>
+                        <p>${mensaje}</p>
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="cargarOrdenes()">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+                        </button>
                     </td>
                 </tr>`;
             return;
         }
 
-        filtradas.forEach(o => {
-            let badgeClass = 'bg-secondary';
-            let icon = 'bi-circle';
+        // Renderizar cada orden
+        filtradas.forEach(orden => {
+            const estado = orden.estado || 'pendiente';
+            const { badgeClass, icon } = obtenerEstiloEstado(estado);
             
-            if(o.estado === 'pendiente') { badgeClass = 'bg-warning text-dark'; icon = 'bi-hourglass-split'; }
-            if(o.estado === 'procesando') { badgeClass = 'bg-info text-dark'; icon = 'bi-box-seam'; }
-            if(o.estado === 'enviado') { badgeClass = 'bg-primary'; icon = 'bi-truck'; }
-            if(o.estado === 'entregado') { badgeClass = 'bg-success'; icon = 'bi-check-circle'; }
-            if(o.estado === 'cancelado') { badgeClass = 'bg-danger'; icon = 'bi-x-circle'; }
-
             const row = `
-                <tr>
-                    <td class="ps-4 font-monospace fw-bold text-primary">#${o.id}</td>
+                <tr class="hover-row">
+                    <td class="ps-4 font-monospace fw-bold text-primary">#${orden.id}</td>
                     <td>
-                        <div class="fw-bold text-dark">${new Date(o.creado_en).toLocaleDateString('es-CL')}</div>
-                        <small class="text-muted">${new Date(o.creado_en).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small>
+                        <div class="fw-bold text-dark">${formatearFecha(orden.creado_en)}</div>
+                        <small class="text-muted">${formatearHora(orden.creado_en)}</small>
                     </td>
-                    <td><span class="fw-medium text-dark">${o.nombre_cliente}</span></td>
-                    <td><div class="text-truncate" style="max-width: 150px;" title="${o.email_cliente}">${o.email_cliente}</div></td>
-                    <td class="text-end fw-bold text-success font-monospace">$${parseFloat(o.total).toLocaleString('es-CL')}</td>
+                    <td><span class="fw-medium text-dark">${orden.nombre_cliente || 'Sin nombre'}</span></td>
+                    <td>
+                        <div class="text-truncate" style="max-width: 150px;" title="${orden.email_cliente || ''}">
+                            ${orden.email_cliente || 'Sin email'}
+                        </div>
+                    </td>
+                    <td class="text-end fw-bold text-success font-monospace">
+                        $${parseFloat(orden.total || 0).toLocaleString('es-CL')}
+                    </td>
                     <td class="text-center">
-                        <span class="badge ${badgeClass} rounded-pill text-uppercase px-3 shadow-sm" style="font-size:0.65rem;">
-                            <i class="bi ${icon} me-1"></i>${o.estado}
+                        <span class="badge ${badgeClass} rounded-pill text-uppercase px-3 py-1 shadow-sm" style="font-size:0.65rem;">
+                            <i class="bi ${icon} me-1"></i>${estado}
                         </span>
                     </td>
                     <td class="text-end pe-4">
-                        <button class="btn btn-sm btn-outline-primary shadow-sm border-0" onclick="verOrden(${o.id})">
-                            Gestionar <i class="bi bi-arrow-right ms-1"></i>
+                        <button class="btn btn-sm btn-outline-primary shadow-sm border-0 rounded-pill px-3" 
+                                onclick="verOrden(${orden.id})" title="Ver detalles">
+                            <i class="bi bi-eye me-1"></i> Ver
                         </button>
                     </td>
                 </tr>
@@ -269,50 +491,73 @@
     function verOrden(id) {
         ordenActualId = id;
         const orden = ordenesGlobal.find(o => o.id === id);
-        if(!orden) return;
+        
+        if (!orden) {
+            alert('No se encontró la orden solicitada');
+            return;
+        }
 
-        // Fill Modal
+        // Llenar modal con datos de la orden
         document.getElementById('modal-id').textContent = orden.id;
-        document.getElementById('modal-cliente').textContent = orden.nombre_cliente;
-        document.getElementById('modal-direccion').textContent = orden.direccion_cliente;
-        document.getElementById('modal-telefono').textContent = orden.telefono_cliente;
-        document.getElementById('modal-email').textContent = orden.email_cliente;
-        document.getElementById('modal-total').textContent = '$' + parseFloat(orden.total).toLocaleString('es-CL');
-        document.getElementById('select-estado').value = orden.estado;
+        document.getElementById('modal-cliente').textContent = orden.nombre_cliente || 'Sin nombre';
+        document.getElementById('modal-direccion').textContent = orden.direccion_cliente || 'Sin dirección';
+        document.getElementById('modal-telefono').textContent = orden.telefono_cliente || 'Sin teléfono';
+        document.getElementById('modal-email').textContent = orden.email_cliente || 'Sin email';
+        document.getElementById('modal-total').textContent = '$' + parseFloat(orden.total || 0).toLocaleString('es-CL');
+        document.getElementById('select-estado').value = orden.estado || 'pendiente';
 
-        // Fill Items
+        // Llenar items
         const tbody = document.getElementById('modal-items');
         tbody.innerHTML = '';
-        if(orden.items) {
-            orden.items.forEach(i => {
-                const nombre = i.nombre_producto || `Producto ID ${i.producto}`;
-                const totalItem = i.cantidad * parseFloat(i.precio_unitario);
+        
+        if (orden.items && Array.isArray(orden.items) && orden.items.length > 0) {
+            orden.items.forEach(item => {
+                const nombre = item.nombre_producto || `Producto #${item.producto}`;
+                const precio = parseFloat(item.precio_unitario || 0);
+                const cantidad = parseInt(item.cantidad || 0);
+                const subtotal = precio * cantidad;
                 
                 tbody.innerHTML += `
                     <tr>
                         <td class="py-2">
                             <span class="d-block fw-bold text-dark" style="font-size: 0.85rem;">${nombre}</span>
-                            <small class="text-muted">$${parseFloat(i.precio_unitario).toLocaleString()} c/u</small>
+                            <small class="text-muted">$${precio.toLocaleString('es-CL')} c/u</small>
                         </td>
-                        <td class="text-center align-middle"><span class="badge bg-light text-dark border">x${i.cantidad}</span></td>
-                        <td class="text-end align-middle fw-bold font-monospace">$${totalItem.toLocaleString()}</td>
+                        <td class="text-center align-middle">
+                            <span class="badge bg-light text-dark border px-3 py-1">x${cantidad}</span>
+                        </td>
+                        <td class="text-end align-middle fw-bold font-monospace">
+                            $${subtotal.toLocaleString('es-CL')}
+                        </td>
                     </tr>
                 `;
             });
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-center py-3 text-muted">
+                        <i class="bi bi-box me-2"></i> Sin productos en esta orden
+                    </td>
+                </tr>
+            `;
         }
 
+        // Mostrar modal
         const modal = new bootstrap.Modal(document.getElementById('modalOrden'));
         modal.show();
     }
 
     async function guardarEstado() {
+        if (!ordenActualId) {
+            alert('No hay orden seleccionada');
+            return;
+        }
+
         const token = localStorage.getItem('access_token');
         const nuevoEstado = document.getElementById('select-estado').value;
-        
-        if(!ordenActualId) return;
 
         try {
-            const res = await fetch(`/api/ordenes/${ordenActualId}/`, {
+            const response = await fetch(`/api/ordenes/${ordenActualId}/`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -321,18 +566,130 @@
                 body: JSON.stringify({ estado: nuevoEstado })
             });
 
-            if(res.ok) {
-                alert('✅ Estado actualizado correctamente');
+            if (response.ok) {
+                // Actualizar orden en memoria
+                const ordenIndex = ordenesGlobal.findIndex(o => o.id === ordenActualId);
+                if (ordenIndex !== -1) {
+                    ordenesGlobal[ordenIndex].estado = nuevoEstado;
+                }
+                
+                // Mostrar mensaje de éxito
+                mostrarToast('success', 'Estado actualizado correctamente');
+                
+                // Cerrar modal
                 const modalEl = document.getElementById('modalOrden');
                 const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                modalInstance.hide();
-                cargarOrdenes();
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+                
+                // Refrescar la vista
+                aplicarFiltro();
+                
             } else {
-                alert('Error al actualizar');
+                mostrarToast('danger', 'Error al actualizar el estado');
             }
-        } catch(e) {
-            alert('Error de conexión');
+        } catch (error) {
+            mostrarToast('danger', 'Error de conexión al guardar');
         }
     }
+
+    // =============================================================
+    // FUNCIONES AUXILIARES
+    // =============================================================
+    function obtenerEstiloEstado(estado) {
+        switch(estado) {
+            case 'pendiente':
+                return { badgeClass: 'badge-estado-pendiente', icon: 'bi-hourglass-split' };
+            case 'procesando':
+                return { badgeClass: 'badge-estado-procesando', icon: 'bi-box-seam' };
+            case 'enviado':
+                return { badgeClass: 'badge-estado-enviado', icon: 'bi-truck' };
+            case 'entregado':
+                return { badgeClass: 'badge-estado-entregado', icon: 'bi-check-circle' };
+            case 'cancelado':
+                return { badgeClass: 'badge-estado-cancelado', icon: 'bi-x-circle' };
+            default:
+                return { badgeClass: 'bg-secondary', icon: 'bi-circle' };
+        }
+    }
+
+    function formatearFecha(fechaString) {
+        if (!fechaString) return 'Sin fecha';
+        try {
+            const fecha = new Date(fechaString);
+            return fecha.toLocaleDateString('es-CL', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch {
+            return fechaString;
+        }
+    }
+
+    function formatearHora(fechaString) {
+        if (!fechaString) return '';
+        try {
+            const fecha = new Date(fechaString);
+            return fecha.toLocaleTimeString('es-CL', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch {
+            return '';
+        }
+    }
+
+    function mostrarToast(tipo, mensaje) {
+        // Crear toast dinámicamente
+        const toastContainer = document.getElementById('toast-container') || crearToastContainer();
+        
+        const toastId = 'toast-' + Date.now();
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-bg-${tipo} border-0`;
+        toast.id = toastId;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi ${tipo === 'success' ? 'bi-check-circle' : 'bi-exclamation-triangle'} me-2"></i>
+                    ${mensaje}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Mostrar toast
+        const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+        bsToast.show();
+        
+        // Eliminar toast después de ocultarse
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+
+    function crearToastContainer() {
+        const container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        container.style.zIndex = '1060';
+        document.body.appendChild(container);
+        return container;
+    }
+
+    // =============================================================
+    // EXPORTAR FUNCIONES AL SCOPE GLOBAL
+    // =============================================================
+    window.cargarOrdenes = cargarOrdenes;
+    window.filtrarEstado = filtrarEstado;
+    window.verOrden = verOrden;
+    window.guardarEstado = guardarEstado;
 </script>
 {% endblock %}

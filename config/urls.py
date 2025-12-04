@@ -1,9 +1,10 @@
-# config/urls.py - VERSIÓN FINAL COMPLETA
+# config/urls.py 
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
+
 
 urlpatterns = [
     # --- ADMINISTRACIÓN Y API ---
@@ -65,7 +66,16 @@ urlpatterns = [
     path('reportes/stock/', TemplateView.as_view(template_name='reportes/stock.html'), name='reportes_stock'), # Faltaba esta
     path('reportes/ventas/', TemplateView.as_view(template_name='reportes/ventas.html'), name='reportes_ventas'), # Faltaba esta
     path('reportes/proveedores/', TemplateView.as_view(template_name='reportes/proveedores.html'), name='reportes_proveedores'), # Faltaba esta
+
+
+    # --- PÁGINAS DE PLANES Y SUSCRIPCIONES ---
+    path('planes/info/', TemplateView.as_view(template_name='planes/info.html'), name='planes_info'),
+    path('planes/actualizar/', TemplateView.as_view(template_name='planes/actualizar.html'), name='planes_actualizar'),
+
+    path('', TemplateView.as_view(template_name='dashboard.html'), name='dashboard'),
+    
 ]
+
 
 # Configuración para archivos estáticos y media en modo DEBUG
 if settings.DEBUG:

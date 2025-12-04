@@ -14,7 +14,28 @@
     </a>
 </div>
 
+<!-- Alerta de límite de sucursales -->
+<div id="alerta-limite" class="alert alert-info border-0 bg-info-subtle d-none mb-4">
+    <div class="d-flex align-items-center">
+        <i class="bi bi-info-circle-fill fs-5 me-3 text-info"></i>
+        <div class="flex-grow-1">
+            <strong>Límite de sucursales alcanzado</strong>
+            <p class="mb-0 small">Tu plan <span id="plan-actual-text" class="fw-bold">Básico</span> permite un máximo de <span id="limite-sucursales" class="fw-bold">1 sucursal</span>. <a href="#" class="alert-link" onclick="mostrarPlanes()">Actualiza tu plan</a> para agregar más.</p>
+        </div>
+        <button type="button" class="btn-close" onclick="document.getElementById('alerta-limite').classList.add('d-none')"></button>
+    </div>
+</div>
+
 <div class="card border-0 shadow-sm overflow-hidden">
+    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+        <div>
+            <span class="badge bg-light text-dark border" id="badge-plan">Plan: Básico</span>
+            <span class="badge bg-light text-dark border ms-2" id="badge-sucursales">Sucursales: 0/1</span>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="actualizarDatos()" title="Actualizar">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -33,7 +54,7 @@
         </div>
     </div>
     <div class="card-footer bg-white py-3 border-top-0">
-        <small class="text-muted">Gestión de puntos de venta físicos.</small>
+        <small class="text-muted" id="texto-limite">Gestión de puntos de venta físicos.</small>
     </div>
 </div>
 
@@ -51,101 +72,302 @@
         background-color: #f8f9fa;
         color: #6c757d;
     }
+    
+    .disabled-card {
+        opacity: 0.6;
+        pointer-events: none;
+    }
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
-        // TOKEN SEGURO (Local)
+        // =============================================================
+        // VERIFICACIÓN DE PLAN Y LÍMITES DE SUSCRIPCIÓN
+        // =============================================================
+        
+        // 1. Verificar autenticación
         const token = localStorage.getItem('access_token');
-        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
-        const tbody = document.getElementById('tabla-sucursales');
-
-        // Ocultar botón si es vendedor
-        if (userInfo.rol === 'vendedor') {
-            const btn = document.getElementById('btn-crear');
-            if(btn) btn.style.display = 'none';
+        if (!token) {
+            window.location.href = '/login/';
+            return;
         }
 
-        try {
-            const response = await fetch('/api/sucursales/', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+        // 2. Obtener información del usuario
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        const rol = userInfo.rol;
+        const plan = userInfo.plan ? userInfo.plan.toLowerCase() : 'basico';
+        
+        // 3. Verificar si tiene permiso para ver sucursales
+        // Sucursales requieren: Rol Admin + Plan Premium (o SuperAdmin)
+        const isPremium = plan === 'premium';
+        const isSuperAdmin = rol === 'super_admin';
+        const hasBranchAccess = isSuperAdmin || (rol === 'admin_cliente' && isPremium);
 
-            if (!response.ok) throw new Error('Error al cargar datos');
+        // 4. Si NO tiene acceso, mostrar mensaje y bloquear
+        if (!hasBranchAccess) {
+            document.querySelector('.main-container').innerHTML = `
+                <div class="row justify-content-center mt-5">
+                    <div class="col-md-8 col-lg-6">
+                        <div class="card border-0 shadow-lg text-center">
+                            <div class="card-body p-5">
+                                <div class="icon-shape bg-success-subtle text-success rounded-circle mx-auto mb-4" style="width: 80px; height: 80px;">
+                                    <i class="bi bi-shop fs-2"></i>
+                                </div>
+                                <h3 class="fw-bold text-dark mb-3">Múltiples Sucursales</h3>
+                                <p class="text-muted mb-4">
+                                    La gestión de múltiples sucursales requiere el <strong class="text-success">Plan Premium</strong>.
+                                </p>
+                                
+                                <div class="alert alert-success border-0 bg-success-subtle text-start mb-4">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-info-circle-fill fs-5 me-3 text-success"></i>
+                                        <div>
+                                            <strong>Tu plan actual: ${plan.toUpperCase()}</strong><br>
+                                            <small class="text-muted">Con el Plan Premium puedes administrar sucursales ilimitadas y gestionar usuarios.</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <div class="card border-0 bg-light h-100">
+                                            <div class="card-body text-center p-3">
+                                                <div class="icon-shape bg-primary-subtle text-primary rounded-circle mx-auto mb-2" style="width: 50px; height: 50px;">
+                                                    <i class="bi bi-1-circle fs-4"></i>
+                                                </div>
+                                                <h6 class="fw-bold mb-0">Plan Básico</h6>
+                                                <small class="text-muted">1 sucursal</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card border-0 bg-light h-100">
+                                            <div class="card-body text-center p-3">
+                                                <div class="icon-shape bg-warning-subtle text-warning rounded-circle mx-auto mb-2" style="width: 50px; height: 50px;">
+                                                    <i class="bi bi-3-circle fs-4"></i>
+                                                </div>
+                                                <h6 class="fw-bold mb-0">Plan Estándar</h6>
+                                                <small class="text-muted">3 sucursales</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card border-0 bg-light h-100">
+                                            <div class="card-body text-center p-3">
+                                                <div class="icon-shape bg-success-subtle text-success rounded-circle mx-auto mb-2" style="width: 50px; height: 50px;">
+                                                    <i class="bi bi-infinity fs-4"></i>
+                                                </div>
+                                                <h6 class="fw-bold mb-0">Plan Premium</h6>
+                                                <small class="text-muted">Sucursales ilimitadas</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex gap-3 justify-content-center">
+                                    <a href="/" class="btn btn-primary">
+                                        <i class="bi bi-arrow-left me-2"></i> Volver al inicio
+                                    </a>
+                                    <button class="btn btn-outline-success" onclick="mostrarPlanes()">
+                                        <i class="bi bi-gem me-2"></i> Actualizar a Premium
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
             
-            const data = await response.json();
-            const sucursales = data.results || data;
+            // Función para mostrar planes
+            window.mostrarPlanes = function() {
+                alert('Planes de Sucursales:\n\n' +
+                      '• BÁSICO: 1 sucursal incluida\n' +
+                      '• ESTÁNDAR: Hasta 3 sucursales\n' +
+                      '• PREMIUM: Sucursales ilimitadas\n\n' +
+                      'Contacta al administrador para cambiar tu plan.');
+            };
+            
+            return; // Detener ejecución
+        }
 
-            tbody.innerHTML = '';
+        // 5. Si SÍ tiene acceso, configurar límites según plan
+        const limitesPorPlan = {
+            'basico': 1,
+            'estandar': 3,
+            'premium': 9999 // Prácticamente ilimitado
+        };
+        
+        const limiteActual = limitesPorPlan[plan] || 1;
+        
+        // Actualizar badges informativos
+        document.getElementById('badge-plan').textContent = `Plan: ${plan.toUpperCase()}`;
+        document.getElementById('badge-plan').className = `badge ${plan === 'premium' ? 'bg-success' : plan === 'estandar' ? 'bg-warning' : 'bg-primary'} text-white`;
+        
+        // Actualizar texto de límite
+        const textoLimite = document.getElementById('texto-limite');
+        if (plan === 'premium') {
+            textoLimite.innerHTML = '<i class="bi bi-infinity text-success me-1"></i> Sucursales ilimitadas';
+        } else {
+            textoLimite.innerHTML = `Límite: ${limiteActual} sucursal${limiteActual !== 1 ? 'es' : ''} permitida${limiteActual !== 1 ? 's' : ''}`;
+        }
 
-            if (sucursales.length === 0) {
+        // =============================================================
+        // CÓDIGO ORIGINAL PARA CARGAR SUCURSALES
+        // =============================================================
+        
+        const tbody = document.getElementById('tabla-sucursales');
+        const btnCrear = document.getElementById('btn-crear');
+        const alertaLimite = document.getElementById('alerta-limite');
+
+        // Ocultar botón si es vendedor
+        if (rol === 'vendedor') {
+            if(btnCrear) btnCrear.style.display = 'none';
+        }
+
+        // Función principal para cargar datos
+        async function cargarSucursales() {
+            try {
+                const response = await fetch('/api/sucursales/', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Error al cargar datos');
+                
+                const data = await response.json();
+                const sucursales = data.results || data;
+                const totalSucursales = sucursales.length;
+
+                // Actualizar badge de contador
+                document.getElementById('badge-sucursales').textContent = `Sucursales: ${totalSucursales}/${limiteActual}`;
+                
+                // Verificar si se alcanzó el límite
+                if (totalSucursales >= limiteActual && plan !== 'premium') {
+                    alertaLimite.classList.remove('d-none');
+                    document.getElementById('plan-actual-text').textContent = plan.toUpperCase();
+                    document.getElementById('limite-sucursales').textContent = `${limiteActual} sucursal${limiteActual !== 1 ? 'es' : ''}`;
+                    
+                    // Deshabilitar botón de crear
+                    if (btnCrear) {
+                        btnCrear.classList.add('disabled');
+                        btnCrear.onclick = (e) => {
+                            e.preventDefault();
+                            alertaLimite.classList.remove('d-none');
+                            alertaLimite.scrollIntoView({ behavior: 'smooth' });
+                        };
+                    }
+                } else {
+                    alertaLimite.classList.add('d-none');
+                    if (btnCrear) {
+                        btnCrear.classList.remove('disabled');
+                        btnCrear.onclick = null; // Restaurar comportamiento normal
+                    }
+                }
+
+                tbody.innerHTML = '';
+
+                if (sucursales.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="text-center py-5">
+                                <div class="text-muted opacity-50 mb-2"><i class="bi bi-shop display-4"></i></div>
+                                <h6 class="text-muted">No hay sucursales registradas</h6>
+                                <p class="small text-muted">Registra tu primera tienda para comenzar.</p>
+                            </td>
+                        </tr>`;
+                    return;
+                }
+
+                sucursales.forEach(s => {
+                    const btnEditar = (rol === 'super_admin' || rol === 'admin_cliente') 
+                        ? `<a href="/sucursales/edit/?id=${s.id}" class="btn btn-sm btn-outline-warning border-0" title="Editar"><i class="bi bi-pencil-fill"></i></a>` 
+                        : '';
+
+                    const row = `
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-circle bg-info-subtle text-info me-3">
+                                        <i class="bi bi-shop"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 text-sm fw-bold text-dark">${s.nombre}</h6>
+                                        <small class="text-muted x-small">Creado: ${new Date(s.creado_en).toLocaleDateString('es-CL')}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-truncate" style="max-width: 200px;">
+                                <i class="bi bi-geo-alt me-1 text-secondary"></i> ${s.direccion}
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column gap-1">
+                                    <div class="d-flex align-items-center text-sm">
+                                        <i class="bi bi-telephone me-2 text-success"></i>
+                                        <span>${s.telefono}</span>
+                                    </div>
+                                    <div class="d-flex align-items-center text-sm">
+                                        <i class="bi bi-envelope me-2 text-primary"></i>
+                                        <a href="mailto:${s.email}" class="text-decoration-none text-secondary">${s.email}</a>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="btn-group shadow-sm">
+                                    <a href="/sucursales/detail/?id=${s.id}" class="btn btn-sm btn-outline-info border-0" title="Ver Detalle">
+                                        <i class="bi bi-eye-fill"></i>
+                                    </a>
+                                    ${btnEditar}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+
+            } catch (error) {
+                console.error('Error:', error);
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="4" class="text-center py-5">
-                            <div class="text-muted opacity-50 mb-2"><i class="bi bi-shop display-4"></i></div>
-                            <h6 class="text-muted">No hay sucursales registradas</h6>
-                            <p class="small text-muted">Registra tu primera tienda para comenzar.</p>
+                        <td colspan="4" class="text-center text-danger py-4">
+                            <div class="icon-shape bg-danger-subtle text-danger rounded-circle mx-auto mb-2" style="width: 48px; height: 48px;">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                            </div>
+                            Error al cargar sucursales. Verifique su conexión.
                         </td>
                     </tr>`;
-                return;
             }
+        }
 
-            sucursales.forEach(s => {
-                const btnEditar = (userInfo.rol === 'super_admin' || userInfo.rol === 'admin_cliente') 
-                    ? `<a href="/sucursales/edit/?id=${s.id}" class="btn btn-sm btn-outline-warning border-0" title="Editar"><i class="bi bi-pencil-fill"></i></a>` 
-                    : '';
-
-                const row = `
-                    <tr>
-                        <td class="ps-4">
-                            <div class="d-flex align-items-center">
-                                <div class="icon-circle bg-info-subtle text-info me-3">
-                                    <i class="bi bi-shop"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-0 text-sm fw-bold text-dark">${s.nombre}</h6>
-                                    <small class="text-muted x-small">Creado: ${new Date(s.creado_en).toLocaleDateString('es-CL')}</small>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="text-truncate" style="max-width: 200px;">
-                            <i class="bi bi-geo-alt me-1 text-secondary"></i> ${s.direccion}
-                        </td>
-                        <td>
-                            <div class="d-flex flex-column gap-1">
-                                <div class="d-flex align-items-center text-sm">
-                                    <i class="bi bi-telephone me-2 text-success"></i>
-                                    <span>${s.telefono}</span>
-                                </div>
-                                <div class="d-flex align-items-center text-sm">
-                                    <i class="bi bi-envelope me-2 text-primary"></i>
-                                    <a href="mailto:${s.email}" class="text-decoration-none text-secondary">${s.email}</a>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="text-end pe-4">
-                            <div class="btn-group shadow-sm">
-                                <a href="/sucursales/detail/?id=${s.id}" class="btn btn-sm btn-outline-info border-0" title="Ver Detalle">
-                                    <i class="bi bi-eye-fill"></i>
-                                </a>
-                                ${btnEditar}
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
+        // Función para actualizar datos
+        window.actualizarDatos = function() {
+            const spinner = document.createElement('div');
+            spinner.className = 'spinner-border spinner-border-sm text-primary me-2';
+            const btn = event.target.closest('button');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '';
+            btn.appendChild(spinner);
+            btn.disabled = true;
+            
+            cargarSucursales().finally(() => {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
             });
+        };
 
-        } catch (error) {
-            console.error('Error:', error);
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="4" class="text-center text-danger py-4">
-                        Error al cargar sucursales. Verifique su conexión.
-                    </td>
-                </tr>`;
+        // Cargar datos iniciales
+        await cargarSucursales();
+
+        // Agregar evento para prevenir creación si se excede límite
+        if (btnCrear) {
+            btnCrear.addEventListener('click', function(e) {
+                const totalSucursales = document.querySelectorAll('#tabla-sucursales tr').length - 1; // Restar fila vacía
+                if (totalSucursales >= limiteActual && plan !== 'premium') {
+                    e.preventDefault();
+                    alertaLimite.classList.remove('d-none');
+                    alertaLimite.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
         }
     });
 </script>

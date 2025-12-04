@@ -81,6 +81,19 @@ class Suscripcion(models.Model):
         if self.fecha_termino <= self.fecha_inicio:
             raise ValidationError('La fecha de término debe ser posterior a la de inicio')
     
+    # 🔥 AGREGA ESTE MÉTODO SAVE() 🔥
+    def save(self, *args, **kwargs):
+        # Asignar límites automáticos según el plan
+        if self.plan == 'basico':
+            self.max_sucursales = 1
+        elif self.plan == 'estandar':
+            self.max_sucursales = 3
+        elif self.plan == 'premium':
+            self.max_sucursales = 9999  # Prácticamente ilimitado
+        
+        # Llamar al save original
+        super().save(*args, **kwargs)
+    
     def __str__(self):
         return f"{self.compania.nombre} - {self.get_plan_display()}"
     
@@ -300,7 +313,7 @@ class ItemOrden(models.Model):
 
 class ItemCarrito(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, null=True, blank=True)
-    clave_sesion = models.CharField(max_length=100, null=True, blank=True)
+    clave_sesion = models.CharField(max_length=100, null=True, blank=True)  # Para usuarios anónimos
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
     cantidad = models.IntegerField(default=1)
     agregado_en = models.DateTimeField(auto_now_add=True)
@@ -310,7 +323,8 @@ class ItemCarrito(models.Model):
             raise ValidationError('La cantidad debe ser mayor a 0')
     
     def __str__(self):
-        return f"{self.producto.nombre} x{self.cantidad}"
+        usuario_str = self.usuario.username if self.usuario else f"Anónimo({self.clave_sesion[:8]}...)"
+        return f"{self.producto.nombre} x{self.cantidad} - {usuario_str}"
     
     class Meta:
         verbose_name = 'Item de Carrito'

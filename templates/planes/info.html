@@ -1,0 +1,530 @@
+{% extends 'base.html' %}
+
+{% block title %}Mi Suscripción - TemucoSoft{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h6 class="text-uppercase text-muted small fw-bold ls-1">Administración</h6>
+                <h2 class="fw-bold text-dark"><i class="bi bi-gem me-2"></i>Mi Suscripción</h2>
+                <p class="text-muted mb-0">Gestión de tu plan y límites actuales.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i> Imprimir
+                </button>
+                <a href="/" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Volver
+                </a>
+            </div>
+        </div>
+
+        <!-- Card Principal de Suscripción -->
+        <div class="card border-0 shadow-lg mb-4" id="card-suscripcion-principal">
+            <div class="card-body p-0">
+                <div class="row g-0">
+                    <!-- Lado Izquierdo: Info del Plan -->
+                    <div class="col-md-8 p-5">
+                        <div class="d-flex align-items-start mb-4">
+                            <div class="icon-shape bg-primary-subtle text-primary rounded-3 me-4" style="width: 70px; height: 70px;">
+                                <i class="bi bi-gem fs-2"></i>
+                            </div>
+                            <div>
+                                <h1 class="fw-bold text-dark mb-1" id="plan-nombre">Plan Básico</h1>
+                                <p class="text-muted mb-0" id="plan-descripcion">Acceso a funcionalidades esenciales</p>
+                                <div class="mt-2">
+                                    <span class="badge bg-success" id="estado-activo">ACTIVO</span>
+                                    <span class="badge bg-light text-dark border ms-2" id="tipo-suscripcion">Mensual</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="card border-0 bg-light h-100">
+                                    <div class="card-body">
+                                        <h6 class="text-uppercase text-muted small fw-bold mb-3">Fecha de Inicio</h6>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-calendar-check-fill fs-3 text-primary me-3"></i>
+                                            <div>
+                                                <h3 class="fw-bold text-dark mb-0" id="fecha-inicio">01/01/2024</h3>
+                                                <small class="text-muted">Contratación</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-0 bg-light h-100">
+                                    <div class="card-body">
+                                        <h6 class="text-uppercase text-muted small fw-bold mb-3">Próxima Renovación</h6>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-calendar-event-fill fs-3 text-warning me-3"></i>
+                                            <div>
+                                                <h3 class="fw-bold text-dark mb-0" id="fecha-renovacion">01/02/2024</h3>
+                                                <small class="text-muted">Próximo pago</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lado Derecho: Resumen de Costos -->
+                    <div class="col-md-4 bg-primary text-white p-5 rounded-end">
+                        <h5 class="fw-bold mb-4">Resumen de Costos</h5>
+                        
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Plan Actual</span>
+                                <span class="fw-bold" id="costo-plan">$29.990</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>IVA (19%)</span>
+                                <span id="iva">$5.698</span>
+                            </div>
+                            <hr class="my-3 opacity-25">
+                            <div class="d-flex justify-content-between fw-bold fs-5">
+                                <span>Total Mensual</span>
+                                <span id="total-mensual">$35.688</span>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-light border-0 text-dark small mt-4">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Facturación automática</strong><br>
+                            El pago se renueva automáticamente cada mes.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección de Límites y Uso -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-speedometer2 me-2"></i>Uso y Límites Actuales</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    
+                    <!-- Sucursales -->
+                    <div class="col-md-4">
+                        <div class="card border-0 h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-1">Sucursales</h6>
+                                        <small class="text-muted">Puntos de venta físicos</small>
+                                    </div>
+                                    <span class="badge bg-primary">BÁSICO</span>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <small class="text-muted">Uso actual</small>
+                                        <small class="fw-bold" id="sucursales-porcentaje">0%</small>
+                                    </div>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar bg-primary" role="progressbar" style="width: 0%" id="sucursales-bar"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h3 class="fw-bold text-dark mb-0" id="sucursales-actual">0</h3>
+                                        <small class="text-muted">Usadas</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <h3 class="fw-bold text-dark mb-0" id="sucursales-limite">1</h3>
+                                        <small class="text-muted">Límite</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Usuarios -->
+                    <div class="col-md-4">
+                        <div class="card border-0 h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-1">Usuarios</h6>
+                                        <small class="text-muted">Accesos al sistema</small>
+                                    </div>
+                                    <span class="badge bg-success">PREMIUM</span>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <small class="text-muted">Uso actual</small>
+                                        <small class="fw-bold" id="usuarios-porcentaje">0%</small>
+                                    </div>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="usuarios-bar"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h3 class="fw-bold text-dark mb-0" id="usuarios-actual">1</h3>
+                                        <small class="text-muted">Activos</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <h3 class="fw-bold text-dark mb-0" id="usuarios-limite">Ilimitados</h3>
+                                        <small class="text-muted">Límite</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- E-commerce -->
+                    <div class="col-md-4">
+                        <div class="card border-0 h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-1">E-commerce</h6>
+                                        <small class="text-muted">Tienda online</small>
+                                    </div>
+                                    <span class="badge bg-success">PREMIUM</span>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <div class="text-center py-3">
+                                        <div class="icon-shape bg-success-subtle text-success rounded-circle mx-auto mb-3" style="width: 60px; height: 60px;">
+                                            <i class="bi bi-shop-window fs-3"></i>
+                                        </div>
+                                        <h6 class="fw-bold text-dark mb-1" id="estado-ecommerce">Activado</h6>
+                                        <small class="text-muted">Pedidos web habilitados</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-center">
+                                    <span class="badge bg-success-subtle text-success border">
+                                        <i class="bi bi-check-circle me-1"></i> Disponible
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparativa de Planes -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-arrow-left-right me-2"></i>Comparativa de Planes</h5>
+                <small class="text-muted">Elige el plan que mejor se adapte a tus necesidades</small>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Característica</th>
+                                <th class="text-center">
+                                    <div class="py-3">
+                                        <h6 class="fw-bold text-primary mb-1">Básico</h6>
+                                        <small class="text-muted">$29.990/mes</small>
+                                    </div>
+                                </th>
+                                <th class="text-center">
+                                    <div class="py-3">
+                                        <h6 class="fw-bold text-warning mb-1">Estándar</h6>
+                                        <small class="text-muted">$59.990/mes</small>
+                                    </div>
+                                </th>
+                                <th class="text-center">
+                                    <div class="py-3">
+                                        <h6 class="fw-bold text-success mb-1">Premium</h6>
+                                        <small class="text-muted">$99.990/mes</small>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="ps-4 fw-bold">Sucursales incluidas</td>
+                                <td class="text-center">1</td>
+                                <td class="text-center">3</td>
+                                <td class="text-center"><i class="bi bi-infinity text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4 fw-bold">Usuarios</td>
+                                <td class="text-center">Administrador</td>
+                                <td class="text-center">Hasta 5</td>
+                                <td class="text-center"><i class="bi bi-infinity text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4 fw-bold">Reportes avanzados</td>
+                                <td class="text-center"><i class="bi bi-x-lg text-danger"></i></td>
+                                <td class="text-center"><i class="bi bi-check-lg text-success"></i></td>
+                                <td class="text-center"><i class="bi bi-check-lg text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4 fw-bold">E-commerce</td>
+                                <td class="text-center"><i class="bi bi-x-lg text-danger"></i></td>
+                                <td class="text-center"><i class="bi bi-x-lg text-danger"></i></td>
+                                <td class="text-center"><i class="bi bi-check-lg text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4 fw-bold">Soporte prioritario</td>
+                                <td class="text-center">Básico</td>
+                                <td class="text-center">Estándar</td>
+                                <td class="text-center">24/7</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4 fw-bold">Backup automático</td>
+                                <td class="text-center">Diario</td>
+                                <td class="text-center">Cada 12h</td>
+                                <td class="text-center">En tiempo real</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-0 text-center py-4">
+                <a href="/planes/actualizar/" class="btn btn-primary btn-lg px-5">
+                    <i class="bi bi-arrow-up-circle me-2"></i> Actualizar Mi Plan
+                </a>
+                <small class="d-block text-muted mt-2">Cambios en el plan se reflejan inmediatamente</small>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    .ls-1 { letter-spacing: 1px; }
+    
+    .icon-shape {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .card {
+        transition: transform 0.2s;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // 1. Verificar autenticación
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/login/';
+            return;
+        }
+
+        // 2. Obtener información del usuario
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        const rol = userInfo.rol;
+        const plan = userInfo.plan ? userInfo.plan.toLowerCase() : 'basico';
+        const companiaNombre = userInfo.compania || 'Tu Empresa';
+        
+        // 3. Configurar según plan
+        configurarPlan(plan, companiaNombre);
+        
+        // 4. Cargar datos de uso
+        await cargarDatosUso(token, plan);
+        
+        // 5. Cargar información de suscripción
+        await cargarInfoSuscripcion(token, plan);
+    });
+
+    function configurarPlan(plan, companiaNombre) {
+        // Configurar colores y textos según plan
+        const cardPrincipal = document.getElementById('card-suscripcion-principal');
+        const planNombre = document.getElementById('plan-nombre');
+        const badgePlan = document.querySelector('#card-suscripcion-principal .badge.bg-primary');
+        
+        let planConfig = {
+            'basico': {
+                nombre: 'Plan Básico',
+                descripcion: 'Perfecto para emprendedores y pequeños negocios',
+                color: 'primary',
+                costo: '$29.990',
+                iva: '$5.698',
+                total: '$35.688'
+            },
+            'estandar': {
+                nombre: 'Plan Estándar',
+                descripcion: 'Ideal para negocios en crecimiento',
+                color: 'warning',
+                costo: '$59.990',
+                iva: '$11.398',
+                total: '$71.388'
+            },
+            'premium': {
+                nombre: 'Plan Premium',
+                descripcion: 'Solución completa para empresas establecidas',
+                color: 'success',
+                costo: '$99.990',
+                iva: '$18.998',
+                total: '$118.988'
+            }
+        };
+        
+        const config = planConfig[plan] || planConfig.basico;
+        
+        // Aplicar configuración
+        planNombre.textContent = config.nombre;
+        planNombre.className = `fw-bold text-dark ${plan === 'premium' ? 'text-gradient-primary-success' : ''}`;
+        document.getElementById('plan-descripcion').textContent = config.descripcion;
+        
+        // Cambiar color del badge
+        if (badgePlan) {
+            badgePlan.className = `badge bg-${config.color}`;
+        }
+        
+        // Actualizar costos
+        document.getElementById('costo-plan').textContent = config.costo;
+        document.getElementById('iva').textContent = config.iva;
+        document.getElementById('total-mensual').textContent = config.total;
+        
+        // Resaltar columna actual en comparativa
+        const columnas = document.querySelectorAll('thead th');
+        columnas.forEach((th, index) => {
+            if (th.textContent.includes(config.nombre.split(' ')[1])) {
+                th.classList.add(`bg-${config.color}-subtle`);
+            }
+        });
+    }
+
+    async function cargarDatosUso(token, plan) {
+        try {
+            // Cargar sucursales
+            const resSucursales = await fetch('/api/sucursales/', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (resSucursales.ok) {
+                const dataSuc = await resSucursales.json();
+                const sucursales = dataSuc.results || dataSuc;
+                const totalSucursales = sucursales.length;
+                
+                // Definir límites según plan
+                const limites = {
+                    'basico': 1,
+                    'estandar': 3,
+                    'premium': 9999
+                };
+                
+                const limiteSucursales = limites[plan] || 1;
+                const porcentajeSucursales = Math.min(Math.round((totalSucursales / limiteSucursales) * 100), 100);
+                
+                // Actualizar UI
+                document.getElementById('sucursales-actual').textContent = totalSucursales;
+                document.getElementById('sucursales-limite').textContent = plan === 'premium' ? 'Ilimitadas' : limiteSucursales;
+                document.getElementById('sucursales-porcentaje').textContent = `${porcentajeSucursales}%`;
+                document.getElementById('sucursales-bar').style.width = `${porcentajeSucursales}%`;
+                
+                // Cambiar color si está cerca del límite
+                if (porcentajeSucursales >= 80 && plan !== 'premium') {
+                    document.getElementById('sucursales-bar').className = 'progress-bar bg-warning';
+                }
+            }
+            
+            // Cargar usuarios
+            const resUsuarios = await fetch('/api/usuarios/', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (resUsuarios.ok) {
+                const dataUsu = await resUsuarios.json();
+                const usuarios = dataUsu.results || dataUsu;
+                const totalUsuarios = usuarios.length;
+                
+                // Para Básico: solo 1 usuario (el admin)
+                // Para Estándar: límite de 5 usuarios
+                // Para Premium: ilimitado
+                let limiteUsuarios = 1;
+                if (plan === 'estandar') limiteUsuarios = 5;
+                if (plan === 'premium') limiteUsuarios = 9999;
+                
+                const porcentajeUsuarios = plan === 'premium' ? 0 : Math.min(Math.round((totalUsuarios / limiteUsuarios) * 100), 100);
+                
+                // Actualizar UI
+                document.getElementById('usuarios-actual').textContent = totalUsuarios;
+                document.getElementById('usuarios-limite').textContent = plan === 'premium' ? 'Ilimitados' : limiteUsuarios;
+                document.getElementById('usuarios-porcentaje').textContent = plan === 'premium' ? '∞' : `${porcentajeUsuarios}%`;
+                
+                if (plan !== 'premium') {
+                    document.getElementById('usuarios-bar').style.width = `${porcentajeUsuarios}%`;
+                    
+                    // Cambiar color si está cerca del límite
+                    if (porcentajeUsuarios >= 80) {
+                        document.getElementById('usuarios-bar').className = 'progress-bar bg-warning';
+                    }
+                } else {
+                    document.getElementById('usuarios-bar').style.display = 'none';
+                }
+            }
+            
+            // Configurar estado de e-commerce
+            const estadoEcommerce = document.getElementById('estado-ecommerce');
+            if (plan === 'premium') {
+                estadoEcommerce.textContent = 'Activado';
+                estadoEcommerce.classList.add('text-success');
+            } else {
+                estadoEcommerce.textContent = 'No disponible';
+                estadoEcommerce.classList.add('text-muted');
+            }
+            
+        } catch (error) {
+            console.error('Error cargando datos de uso:', error);
+        }
+    }
+
+    async function cargarInfoSuscripcion(token, plan) {
+        try {
+            // En un sistema real, aquí harías una llamada a la API de suscripción
+            // Por ahora, usamos datos simulados
+            
+            const hoy = new Date();
+            const inicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 15);
+            const renovacion = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 15);
+            
+            // Formatear fechas
+            const fmtFecha = (fecha) => fecha.toLocaleDateString('es-CL', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            
+            document.getElementById('fecha-inicio').textContent = fmtFecha(inicio);
+            document.getElementById('fecha-renovacion').textContent = fmtFecha(renovacion);
+            
+            // Mostrar días restantes
+            const diffMs = renovacion - hoy;
+            const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            
+            if (diffDias < 7) {
+                document.getElementById('estado-activo').className = 'badge bg-warning';
+                document.getElementById('estado-activo').textContent = `RENUEVA EN ${diffDias} DÍAS`;
+            }
+            
+        } catch (error) {
+            console.error('Error cargando info de suscripción:', error);
+        }
+    }
+</script>
+{% endblock %}

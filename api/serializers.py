@@ -1,4 +1,4 @@
-# api/serializers.py - VERSIÓN ULTRA BLINDADA (SOLUCIÓN FINAL)
+# api/serializers.py - 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.db import transaction 
@@ -265,12 +265,65 @@ class ItemCarritoSerializer(serializers.ModelSerializer):
     nombre_producto = serializers.SerializerMethodField()
     precio_producto = serializers.DecimalField(source='producto.precio', read_only=True, max_digits=10, decimal_places=2)
     subtotal = serializers.SerializerMethodField()
+    sku_producto = serializers.CharField(source='producto.sku', read_only=True)
+    
     class Meta:
         model = ItemCarrito
-        fields = ('id', 'producto', 'nombre_producto', 'precio_producto', 'cantidad', 'subtotal')
+        fields = (
+            'id', 
+            'producto', 
+            'nombre_producto',
+            'sku_producto',
+            'precio_producto', 
+            'cantidad', 
+            'subtotal',
+            'clave_sesion',
+            'usuario',
+            'agregado_en'
+        )
+        read_only_fields = (
+            'id', 
+            'nombre_producto', 
+            'precio_producto', 
+            'subtotal',
+            'sku_producto',
+            'clave_sesion',
+            'usuario',
+            'agregado_en'
+        )
+        extra_kwargs = {
+            'producto': {'required': True, 'write_only': True},
+            'cantidad': {'required': True, 'min_value': 1}
+        }
     
     def get_nombre_producto(self, obj):
         return obtener_nombre_seguro(obj, 'producto')
 
     def get_subtotal(self, obj):
-        return obj.cantidad * obj.producto.precio
+        if obj.producto and hasattr(obj.producto, 'precio'):
+            return obj.cantidad * obj.producto.precio
+        return 0
+    
+    def validate(self, data):
+        """Validaciones adicionales"""
+        producto = data.get('producto')
+        cantidad = data.get('cantidad', 1)
+        
+        # Verificar que el producto existe y está activo
+        if not Producto.objects.filter(id=producto.id).exists():
+            raise serializers.ValidationError(
+                {"producto": "Producto no encontrado"}
+            )
+        
+        # Verificar cantidad positiva
+        if cantidad <= 0:
+            raise serializers.ValidationError(
+                {"cantidad": "La cantidad debe ser mayor a 0"}
+            )
+        
+        return data
+    
+    def create(self, validated_data):
+        """Sobreescribir create para manejar lógica personalizada"""
+        # Esta lógica ya se maneja en la vista
+        return super().create(validated_data)

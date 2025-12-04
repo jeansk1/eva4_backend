@@ -105,6 +105,9 @@
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2">
                             <li><h6 class="dropdown-header text-uppercase small" id="user-role-display">Rol</h6></li>
                             <li><a class="dropdown-item" href="/usuarios/perfil/"><i class="bi bi-person-gear me-2"></i> Mi Perfil</a></li>
+                            <!-- NUEVO: Enlace a Mi Suscripción -->
+                            <li><a class="dropdown-item" href="/planes/info/"><i class="bi bi-gem me-2"></i> Mi Suscripción</a></li>
+                            
                             <li><hr class="dropdown-divider"></li>
                             <li><button class="dropdown-item text-danger" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i> Cerrar Sesión</button></li>
                         </ul>
@@ -129,13 +132,18 @@
     <script>
         // --- SEGURIDAD Y MENÚ DINÁMICO ---
         const token = localStorage.getItem('access_token');
+        // Aseguramos que user_info exista y sea parseado, por si acaso
         const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
 
-        // NIVELES DE PERMISO BASADO EN EL PLAN DE SUSCRIPCIÓN
-        const userPlan = userInfo.plan;
-        const isStandardOrHigher = userPlan === 'Estándar' || userPlan === 'Premium';
-        const isPremium = userPlan === 'Premium';
-
+        // -----------------------------------------------------------------
+        // NIVELES DE PERMISO BASADO EN EL PLAN DE SUSCRIPCIÓN (CORREGIDO)
+        // -----------------------------------------------------------------
+        // Normalizamos a minúsculas para comparaciones seguras (basico, estandar, premium)
+        const userPlan = userInfo.plan ? userInfo.plan.toLowerCase() : 'basico'; 
+        const isStandardOrHigher = userPlan === 'estandar' || userPlan === 'premium';
+        const isPremium = userPlan === 'premium';
+        const rol = userInfo.rol; // El rol se usa para los permisos base (vendedor, gerente, admin)
+        
         // 1. Protección de Rutas
         const path = window.location.pathname;
         if (!token && !path.includes('/login/') && !path.includes('/tienda/')) {
@@ -147,20 +155,22 @@
             // Mostrar usuario en Navbar
             if(userInfo.username) {
                 document.getElementById('user-display-name').textContent = userInfo.username;
-                const rolFormatted = userInfo.rol.replace('_', ' ').toUpperCase();
-                document.getElementById('user-role-display').textContent = `${rolFormatted} (${userPlan || 'N/A'})`;
+                const rolFormatted = (rol || '').replace('_', ' ').toUpperCase();
+                // Mostramos el rol y el plan
+                document.getElementById('user-role-display').textContent = `${rolFormatted} (${userPlan.toUpperCase() || 'N/A'})`; 
             }
 
             // 2. Construir Menú según Rol y Plan
             const menu = document.getElementById('menu-opciones');
             if (menu) {
-                const rol = userInfo.rol;
                 let html = '';
 
                 // INICIO (Todos los logueados)
                 html += `<li class="nav-item"><a class="nav-link" href="/">Inicio</a></li>`;
 
-                // VENTAS (POS) - DISPONIBLE EN TODOS LOS PLANES (BÁSICO o superior)
+                // =========================================================
+                // PLAN BÁSICO: Ventas POS (para vendedores)
+                // =========================================================
                 if (['vendedor', 'admin_cliente', 'super_admin'].includes(rol)) {
                     html += `
                         <li class="nav-item dropdown">
@@ -172,14 +182,14 @@
                                 
                                 ${isPremium ? `
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item fw-bold text-primary" href="/ventas/ordenes/">📦 Pedidos Web</a></li>
+                                <li id="nav-pedidos-web"><a class="dropdown-item fw-bold text-primary" href="/ventas/ordenes/">📦 Pedidos Web</a></li>
                                 ` : ''}
                             </ul>
                         </li>
                     `;
                 }
 
-                // INVENTARIO y LOGÍSTICA - DISPONIBLE EN BÁSICO (Gerentes, Admins)
+                // PLAN BÁSICO: Inventario y Logística (para gerentes/admins)
                 if (['gerente', 'admin_cliente', 'super_admin'].includes(rol)) {
                     html += `
                         <li class="nav-item dropdown">
@@ -195,11 +205,13 @@
                     `;
                 }
                 
-                // REPORTES DETALLADOS - SOLO PLAN ESTÁNDAR Y PREMIUM
+                // =========================================================
+                // PLAN ESTÁNDAR: Reportes Detallados
+                // =========================================================
                 if (isStandardOrHigher && ['gerente', 'admin_cliente', 'super_admin'].includes(rol)) {
                     html += `
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Reportes</a>
+                            <a class="nav-link dropdown-toggle text-warning" href="#" data-bs-toggle="dropdown">Reportes</a>
                             <ul class="dropdown-menu shadow-sm border-0">
                                 <li><a class="dropdown-item" href="/reportes/">Dashboard General</a></li>
                                 <li><hr class="dropdown-divider"></li>
@@ -211,14 +223,23 @@
                     `;
                 }
 
-                // ADMINISTRACIÓN - SOLO PLAN PREMIUM
+                // =========================================================
+                // PLAN PREMIUM: Gestión de Sucursales y Usuarios
+                // =========================================================
+                // Restringimos Usuarios/Sucursales al Premium, ya que el límite de Sucursales es un 
+                // diferencial clave del plan.
                 if (isPremium && ['admin_cliente', 'super_admin'].includes(rol)) {
                     html += `
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Administración</a>
+                            <a class="nav-link dropdown-toggle text-success fw-bold" href="#" data-bs-toggle="dropdown">Administración</a>
                             <ul class="dropdown-menu shadow-sm border-0">
                                 <li><a class="dropdown-item" href="/sucursales/">Sucursales</a></li>
                                 <li><a class="dropdown-item" href="/usuarios/">Usuarios</a></li>
+                                
+                                ${rol === 'super_admin' ? `
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="/admin/">Django Admin</a></li>
+                                ` : ''}
                             </ul>
                         </li>
                     `;

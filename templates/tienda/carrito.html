@@ -12,6 +12,29 @@
         .navbar-brand { font-weight: 700; color: #0d6efd !important; }
         .checkout-sidebar { position: sticky; top: 20px; }
         .alert-stock-error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+        .item-overstock { background-color: #fff3cd; border-left: 4px solid #ffc107; }
+        
+        /* Animaciones */
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Notificaciones */
+        .notification-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -32,43 +55,61 @@
     <div class="container pb-5">
         <div class="row g-5">
             <div class="col-lg-8">
-                
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0 fw-bold">Tu Carrito <span class="badge bg-secondary rounded-pill ms-2" id="cart-count-badge" style="font-size: 0.8rem;">0</span></h4>
+                    <h4 class="mb-0 fw-bold">Tu Carrito <span class="badge bg-primary rounded-pill ms-2" id="cart-count-badge">0</span></h4>
+                    <button class="btn btn-outline-danger btn-sm" onclick="vaciarCarrito()" id="btn-vaciar" disabled>
+                        <i class="bi bi-trash"></i> Vaciar Todo
+                    </button>
+                </div>
+
+                <!-- Estado -->
+                <div id="status-message" class="alert alert-info d-none mb-3 fade-in">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <span id="status-text">Cargando...</span>
                 </div>
 
                 <div class="card border-0 shadow-sm mb-5 overflow-hidden">
                     <div class="card-body p-0">
                         <div id="cart-items-container">
-                            <div class="text-center py-5">
-                                <div class="spinner-border text-primary" role="status"></div>
-                                <p class="mt-3 text-muted small">Cargando tus productos...</p>
-                            </div>
+                            <!-- Se llena dinámicamente -->
                         </div>
                     </div>
                 </div>
 
-                <div id="checkout-form-section">
+                <div id="checkout-form-section" class="d-none fade-in">
                     <h4 class="mb-3 fw-bold">Datos de Despacho</h4>
                     <div class="card border-0 shadow-sm">
                         <div class="card-body p-4">
                             <form id="order-form" class="needs-validation" novalidate>
                                 <div class="row g-3">
                                     <div class="col-sm-6">
-                                        <label class="form-label small fw-bold text-uppercase text-secondary">Nombre Completo</label>
+                                        <label class="form-label small fw-bold text-uppercase text-secondary">Nombre Completo <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" id="cliente_nombre" required placeholder="Ej: Juan Pérez">
+                                        <div class="invalid-feedback">Por favor ingresa tu nombre</div>
                                     </div>
                                     <div class="col-sm-6">
-                                        <label class="form-label small fw-bold text-uppercase text-secondary">Email</label>
+                                        <label class="form-label small fw-bold text-uppercase text-secondary">Email <span class="text-danger">*</span></label>
                                         <input type="email" class="form-control" id="cliente_email" required placeholder="correo@ejemplo.com">
+                                        <div class="invalid-feedback">Por favor ingresa un email válido</div>
                                     </div>
                                     <div class="col-sm-6">
-                                        <label class="form-label small fw-bold text-uppercase text-secondary">Teléfono</label>
-                                        <input type="tel" class="form-control" id="cliente_telefono" placeholder="+56 9 ...">
+                                        <label class="form-label small fw-bold text-uppercase text-secondary">Teléfono <span class="text-danger">*</span></label>
+                                        <input type="tel" class="form-control" id="cliente_telefono" required placeholder="+56 9 1234 5678">
+                                        <div class="invalid-feedback">Por favor ingresa tu teléfono</div>
                                     </div>
                                     <div class="col-12">
-                                        <label class="form-label small fw-bold text-uppercase text-secondary">Dirección de Envío</label>
-                                        <textarea class="form-control" id="cliente_direccion" rows="2" required placeholder="Calle, Número, Depto, Comuna"></textarea>
+                                        <label class="form-label small fw-bold text-uppercase text-secondary">Dirección de Envío <span class="text-danger">*</span></label>
+                                        <textarea class="form-control" id="cliente_direccion" rows="3" required placeholder="Calle, Número, Depto, Comuna, Región"></textarea>
+                                        <div class="invalid-feedback">Por favor ingresa tu dirección</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="terminos" required>
+                                            <label class="form-check-label small" for="terminos">
+                                                Acepto los <a href="#" class="text-decoration-none">términos y condiciones</a> de compra
+                                            </label>
+                                            <div class="invalid-feedback">Debes aceptar los términos y condiciones</div>
+                                        </div>
                                     </div>
                                 </div>
                             </form>
@@ -84,9 +125,9 @@
                             <h5 class="mb-0 fw-bold text-dark">Resumen del Pedido</h5>
                         </div>
                         <div class="card-body p-4">
-                            
-                            <div id="stock-warning" class="alert alert-stock-error d-none mb-3 py-2 small fw-bold">
-                                <i class="bi bi-x-octagon-fill me-1"></i> Stock Insuficiente
+                            <div id="stock-warning" class="alert alert-warning d-none mb-3 py-2 small fade-in">
+                                <i class="bi bi-exclamation-triangle me-1"></i> 
+                                <span id="stock-error-details">Verificando stock...</span>
                             </div>
 
                             <ul class="list-unstyled mb-4">
@@ -94,25 +135,28 @@
                                     <span class="text-muted">Subtotal</span>
                                     <strong id="summary-subtotal">$0</strong>
                                 </li>
-                                <li class="d-flex justify-content-between mb-3">
+                                <li class="d-flex justify-content-between mb-2">
                                     <span class="text-muted">Envío</span>
                                     <span class="text-success fw-bold">Gratis</span>
                                 </li>
+                                <li class="d-flex justify-content-between mb-3 border-top pt-2">
+                                    <span class="text-muted">Productos</span>
+                                    <span id="summary-items-count">0</span>
+                                </li>
                                 <li class="d-flex justify-content-between border-top pt-3">
-                                    <span class="fs-5 fw-bold">Total a Pagar</span>
+                                    <span class="fs-5 fw-bold">Total</span>
                                     <span class="fs-4 fw-bold text-primary" id="summary-total">$0</span>
                                 </li>
                             </ul>
 
                             <button class="btn btn-success w-100 btn-lg py-3 fw-bold shadow-sm mb-3" onclick="procesarPago()" id="btn-pagar" disabled>
-                                Confirmar y Pagar
+                                <i class="bi bi-credit-card me-2"></i> Confirmar y Pagar
                             </button>
                             
-                            <div class="text-center">
-                                <button class="btn btn-link text-danger text-decoration-none btn-sm" onclick="vaciarCarrito()">
-                                    Vaciar Carrito
-                                </button>
-                            </div>
+                            <p class="text-center text-muted small mb-0">
+                                <i class="bi bi-shield-check text-success me-1"></i>
+                                Pago 100% seguro
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -122,267 +166,634 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const CART_KEY = 'carrito_tienda';
+        // ============================================
+        // CONFIGURACIÓN GLOBAL
+        // ============================================
+        const API_BASE_URL = '/api';
         let cart = [];
-        let inventarioGlobal = {}; // Cache de stock
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // Carga stock y luego el carrito para que tenga los datos al renderizar
-            cargarInventarioStock();
-            cargarCarrito(); 
-            prellenarDatosUsuario();
-        });
-
-        // --- LÓGICA DE STOCK (Igual que en el catálogo) ---
-        async function cargarInventarioStock() {
-            const token = localStorage.getItem('access_token');
-            const headers = {};
-            if (token) headers['Authorization'] = `Bearer ${token}`;
+        let inventarioGlobal = {};
+        
+        // ============================================
+        // FUNCIONES DE UTILIDAD
+        // ============================================
+        
+        // Obtener CSRF Token de cookies
+        function getCSRFToken() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'csrftoken') {
+                    console.log('🔐 CSRF Token encontrado');
+                    return value;
+                }
+            }
+            console.warn('⚠️ CSRF token no encontrado');
+            return null;
+        }
+        
+        // Configuración dinámica para fetch
+        function getFetchConfig(method = 'GET', data = null) {
+            const config = {
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                }
+            };
             
+            // Para métodos que modifican datos, agregar CSRF token
+            if (method !== 'GET') {
+                const csrfToken = getCSRFToken();
+                if (csrfToken) {
+                    config.headers['X-CSRFToken'] = csrfToken;
+                    console.log('🔐 Enviando CSRF token para método', method);
+                }
+            }
+            
+            if (method !== 'GET' && data !== null) {
+                config.method = method;
+                config.body = JSON.stringify(data);
+            }
+            
+            return config;
+        }
+        
+        // Mostrar notificación toast
+        function mostrarNotificacion(mensaje, tipo = 'info') {
+            // Remover notificaciones anteriores
+            document.querySelectorAll('.notification-toast').forEach(n => n.remove());
+            
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${tipo} notification-toast shadow-lg`;
+            toast.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="bi ${tipo === 'success' ? 'bi-check-circle-fill' : 
+                                  tipo === 'error' ? 'bi-exclamation-triangle-fill' : 
+                                  tipo === 'warning' ? 'bi-exclamation-triangle-fill' : 
+                                  'bi-info-circle-fill'} me-2"></i>
+                    <span class="flex-grow-1">${mensaje}</span>
+                    <button type="button" class="btn-close btn-sm" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Auto-remover después de 3 segundos
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 3000);
+        }
+        
+        // Mostrar estado en el carrito
+        function mostrarEstado(mensaje, tipo = 'info') {
+            const statusEl = document.getElementById('status-message');
+            const statusText = document.getElementById('status-text');
+            
+            if (!statusEl || !statusText) return;
+            
+            statusText.textContent = mensaje;
+            statusEl.className = `alert alert-${tipo} d-flex align-items-center fade-in`;
+            statusEl.classList.remove('d-none');
+            
+            if (tipo === 'success') {
+                setTimeout(() => statusEl.classList.add('d-none'), 3000);
+            }
+        }
+        
+        // ============================================
+        // INICIALIZACIÓN
+        // ============================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Iniciando aplicación del carrito...');
+            mostrarEstado('Cargando tu carrito...', 'info');
+            await inicializarCarrito();
+        });
+        
+        // ============================================
+        // FUNCIÓN PRINCIPAL
+        // ============================================
+        async function inicializarCarrito() {
             try {
-                // Consultar el inventario total (sin filtro de sucursal)
-                const res = await fetch('/api/inventario/', { headers }); 
+                console.log('🍪 Verificando cookies...');
+                console.log('Cookies actuales:', document.cookie);
+                
+                // Cargar inventario
+                await cargarInventarioStock();
+                
+                // Cargar carrito
+                await cargarCarritoDesdeAPI();
+                
+                // Configurar listeners
+                setupEventListeners();
+                
+            } catch (error) {
+                console.error('❌ Error inicializando:', error);
+                mostrarEstado('Error al cargar el carrito', 'danger');
+                mostrarNotificacion('Error al cargar el carrito', 'error');
+            }
+        }
+        
+        // ============================================
+        // CARGAR INVENTARIO
+        // ============================================
+        async function cargarInventarioStock() {
+            try {
+                console.log('📦 Cargando inventario...');
+                const res = await fetch(`${API_BASE_URL}/inventario/`, getFetchConfig());
                 
                 if (res.ok) {
                     const data = await res.json();
                     const listaInventario = data.results || data;
                     
+                    inventarioGlobal = {};
                     listaInventario.forEach(item => {
                         const stock = parseInt(item.stock) || 0;
                         const prodId = item.producto;
-                        // Sumamos stock de todas las sucursales
-                        inventarioGlobal[prodId] = (inventarioGlobal[prodId] || 0) + stock; 
+                        inventarioGlobal[prodId] = (inventarioGlobal[prodId] || 0) + stock;
                     });
+                    
+                    console.log(`✅ Inventario cargado: ${Object.keys(inventarioGlobal).length} productos`);
+                    return true;
                 }
+                return false;
             } catch(e) {
-                console.warn("No se pudo cargar el inventario de stock.");
+                console.error("❌ Error inventario:", e);
+                return false;
             }
         }
-
-        function cargarCarrito() {
-            const stored = localStorage.getItem(CART_KEY);
-            cart = stored ? JSON.parse(stored) : [];
-            
-            // Usamos setTimeout para asegurar que el inventarioGlobal tenga tiempo de cargarse
-            setTimeout(() => {
-                renderizarItems();
-                actualizarTotales();
-                validarStockGlobal(); // Nueva validación al cargar el carrito
-            }, 500); 
+        
+        // ============================================
+        // CARGAR CARRITO DESDE API
+        // ============================================
+        async function cargarCarritoDesdeAPI() {
+            try {
+                console.log('🔍 Solicitando carrito...');
+                const res = await fetch(`${API_BASE_URL}/carrito/`, getFetchConfig());
+                
+                console.log('📊 Respuesta:', res.status, res.statusText);
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log('📦 Datos recibidos:', data);
+                    
+                    const items = data.results || data;
+                    
+                    if (items.length === 0) {
+                        mostrarEstado('Tu carrito está vacío', 'info');
+                        cart = [];
+                        renderizarItems();
+                        return;
+                    }
+                    
+                    // Procesar items
+                    cart = items.map(item => {
+                        const producto = item.producto || {};
+                        return {
+                            carrito_id: item.id,
+                            producto_id: producto.id || producto,
+                            nombre: producto.nombre || 'Producto',
+                            precio: parseFloat(producto.precio) || 0,
+                            cantidad: item.cantidad || 1,
+                            stock_disponible: inventarioGlobal[producto.id || producto] || 0,
+                            imagen: producto.imagen || null
+                        };
+                    });
+                    
+                    console.log(`✅ Carrito cargado: ${cart.length} items`);
+                    mostrarEstado(`Carrito cargado (${cart.length} productos)`, 'success');
+                    renderizarItems();
+                    actualizarResumen();
+                    
+                } else if (res.status === 404 || res.status === 204) {
+                    // Carrito vacío
+                    cart = [];
+                    mostrarEstado('Tu carrito está vacío', 'info');
+                    renderizarItems();
+                } else {
+                    const errorText = await res.text();
+                    console.error('❌ Error API:', res.status, errorText);
+                    mostrarEstado(`Error ${res.status}: No se pudo cargar el carrito`, 'danger');
+                }
+            } catch (e) {
+                console.error('❌ Error conexión:', e);
+                mostrarEstado('Error de conexión con el servidor', 'danger');
+            }
         }
-
+        
+        // ============================================
+        // RENDERIZAR ITEMS
+        // ============================================
         function renderizarItems() {
             const container = document.getElementById('cart-items-container');
-            const btnPagar = document.getElementById('btn-pagar');
+            const checkoutSection = document.getElementById('checkout-form-section');
+            const btnVaciar = document.getElementById('btn-vaciar');
             
-            if (cart.length === 0) {
-                 // ... (Código de carrito vacío) ...
+            if (!container) return;
+            
+            if (!cart || cart.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-5">
                         <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
                             <i class="bi bi-cart-x fs-1 text-secondary opacity-50"></i>
                         </div>
-                        <h5 class="text-dark fw-bold">Tu carrito está vacío</h5>
-                        <p class="text-muted mb-4">Parece que aún no has agregado productos.</p>
-                        <a href="/tienda/" class="btn btn-primary px-4 rounded-pill">Explorar Tienda</a>
+                        <h5 class="text-dark fw-bold mb-3">Tu carrito está vacío</h5>
+                        <p class="text-muted mb-4">Agrega productos desde la tienda.</p>
+                        <a href="/tienda/" class="btn btn-primary px-4 rounded-pill">
+                            <i class="bi bi-arrow-left me-2"></i> Ir a la Tienda
+                        </a>
                     </div>
                 `;
-                btnPagar.disabled = true;
-                document.getElementById('cart-count-badge').textContent = '0';
-                validarStockGlobal(); // Aseguramos que la alerta se oculte
+                if (checkoutSection) checkoutSection.classList.add('d-none');
+                if (btnVaciar) btnVaciar.disabled = true;
+                if (document.getElementById('cart-count-badge')) {
+                    document.getElementById('cart-count-badge').textContent = '0';
+                }
+                if (document.getElementById('btn-pagar')) {
+                    document.getElementById('btn-pagar').disabled = true;
+                }
                 return;
             }
-
-            btnPagar.disabled = false;
-            document.getElementById('cart-count-badge').textContent = cart.length;
-
+            
+            // Mostrar contenido
+            if (checkoutSection) checkoutSection.classList.remove('d-none');
+            if (btnVaciar) btnVaciar.disabled = false;
+            if (document.getElementById('cart-count-badge')) {
+                document.getElementById('cart-count-badge').textContent = cart.length;
+            }
+            
             let html = '<ul class="list-group list-group-flush">';
             let hayErrorStock = false;
             
-            cart.forEach((item, index) => {
-                const totalItem = item.precio * item.cantidad;
-                const stockDisponible = inventarioGlobal[item.id] || 0;
-                const isOverstock = item.cantidad > stockDisponible;
-
-                if (isOverstock) hayErrorStock = true;
-
+            cart.forEach(item => {
+                const stockSuficiente = item.stock_disponible >= item.cantidad;
+                const subtotal = item.precio * item.cantidad;
+                
+                if (!stockSuficiente) hayErrorStock = true;
+                
                 html += `
-                    <li class="list-group-item py-3 ${isOverstock ? 'alert-stock-error border-danger' : ''}">
+                    <li class="list-group-item py-3 fade-in ${!stockSuficiente ? 'item-overstock' : ''}">
                         <div class="row align-items-center">
-                            <div class="col-md-6 mb-2 mb-md-0">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded p-2 me-3 flex-shrink-0">
-                                        <i class="bi bi-box-seam fs-4 text-secondary"></i>
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <div class="d-flex align-items-start">
+                                    <div class="bg-light rounded p-2 me-3 flex-shrink-0" style="width: 60px; height: 60px;">
+                                        ${item.imagen ? 
+                                            `<img src="${item.imagen}" class="img-fluid" alt="${item.nombre}" style="width: 100%; height: 100%; object-fit: contain;">` :
+                                            `<i class="bi bi-box-seam fs-4 ${!stockSuficiente ? 'text-warning' : 'text-secondary'} d-flex align-items-center justify-content-center h-100"></i>`
+                                        }
                                     </div>
                                     <div>
-                                        <h6 class="mb-0 fw-bold text-dark">${item.nombre}</h6>
-                                        ${isOverstock 
-                                            ? `<span class="text-danger small fw-bold"><i class="bi bi-x-octagon me-1"></i> Stock MAX: ${stockDisponible}</span>` 
-                                            : `<small class="text-muted">Unitario: $${item.precio.toLocaleString()}</small>`}
+                                        <h6 class="mb-1 fw-bold text-dark">${item.nombre}</h6>
+                                        <p class="text-muted small mb-1">$${item.precio.toLocaleString('es-CL')} c/u</p>
+                                        <p class="small ${!stockSuficiente ? 'text-danger' : 'text-success'} mb-0">
+                                            <i class="bi ${!stockSuficiente ? 'bi-exclamation-triangle' : 'bi-check-circle'} me-1"></i>
+                                            Stock: ${item.stock_disponible} unidades
+                                        </p>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-3 col-6">
-                                <div class="input-group input-group-sm ${isOverstock ? 'border border-danger' : ''}">
-                                    <button class="btn btn-outline-secondary ${isOverstock ? 'border-danger' : ''}" type="button" onclick="updateQty(${index}, -1)">-</button>
-                                    <input type="text" class="form-control text-center bg-white ${isOverstock ? 'text-danger fw-bold' : ''}" value="${item.cantidad}" readonly>
-                                    <button class="btn btn-outline-secondary ${isOverstock ? 'border-danger' : ''}" type="button" onclick="updateQty(${index}, 1)">+</button>
+                                <div class="input-group input-group-sm">
+                                    <button class="btn btn-outline-secondary" onclick="actualizarCantidad(${item.carrito_id}, -1, ${item.producto_id})" ${item.cantidad <= 1 ? 'disabled' : ''}>
+                                        <i class="bi bi-dash"></i>
+                                    </button>
+                                    <input type="text" class="form-control text-center" value="${item.cantidad}" readonly>
+                                    <button class="btn btn-outline-secondary" onclick="actualizarCantidad(${item.carrito_id}, 1, ${item.producto_id})" ${!stockSuficiente && item.cantidad >= item.stock_disponible ? 'disabled' : ''}>
+                                        <i class="bi bi-plus"></i>
+                                    </button>
                                 </div>
                             </div>
                             <div class="col-md-3 col-6 text-end">
-                                <span class="fw-bold d-block">$${totalItem.toLocaleString()}</span>
-                                <small role="button" class="text-danger text-decoration-underline" style="font-size: 0.75rem;" onclick="removeItem(${index})">Eliminar</small>
+                                <span class="fw-bold d-block fs-5">$${subtotal.toLocaleString('es-CL')}</span>
+                                <button class="btn btn-sm btn-link text-danger p-0" onclick="eliminarItem(${item.carrito_id})">
+                                    <i class="bi bi-trash me-1"></i> Eliminar
+                                </button>
                             </div>
                         </div>
                     </li>
                 `;
             });
+            
             html += '</ul>';
             container.innerHTML = html;
-            validarStockGlobal(hayErrorStock);
-        }
-
-        function validarStockGlobal(hayError) {
-            const warningBox = document.getElementById('stock-warning');
-            const btnPagar = document.getElementById('btn-pagar');
-
-            if (hayError) {
-                warningBox.classList.remove('d-none');
-                btnPagar.disabled = true;
-                btnPagar.textContent = 'Stock Insuficiente';
-                btnPagar.classList.replace('btn-success', 'btn-danger');
-            } else {
-                warningBox.classList.add('d-none');
-                if (cart.length > 0) {
-                    btnPagar.disabled = false;
-                    btnPagar.textContent = 'Confirmar y Pagar';
-                    btnPagar.classList.replace('btn-danger', 'btn-success');
-                }
-            }
-        }
-
-        function actualizarTotales() {
-            const total = cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
             
-            document.getElementById('summary-subtotal').textContent = '$' + total.toLocaleString('es-CL');
-            document.getElementById('summary-total').textContent = '$' + total.toLocaleString('es-CL');
+            // Actualizar estado de stock
+            verificarStockGlobal(hayErrorStock);
         }
-
-        function updateQty(index, change) {
-            const stockDisponible = inventarioGlobal[cart[index].id] || 0;
-            const newQty = cart[index].cantidad + change;
-
-            if (newQty < 1) {
-                removeItem(index);
+        
+        // ============================================
+        // ACTUALIZAR CANTIDAD
+        // ============================================
+        async function actualizarCantidad(carritoId, cambio, productoId) {
+            const itemIndex = cart.findIndex(item => item.carrito_id === carritoId);
+            if (itemIndex === -1) return;
+            
+            const item = cart[itemIndex];
+            const stockDisponible = inventarioGlobal[productoId] || 0;
+            const nuevaCantidad = item.cantidad + cambio;
+            
+            if (nuevaCantidad < 1) {
+                await eliminarItem(carritoId);
                 return;
             }
-            if (newQty > stockDisponible) {
-                alert(`No puedes agregar más. Máximo disponible: ${stockDisponible}`);
+            
+            if (nuevaCantidad > stockDisponible) {
+                mostrarEstado(`Stock máximo: ${stockDisponible} unidades`, 'warning');
+                mostrarNotificacion(`Stock máximo: ${stockDisponible} unidades`, 'warning');
                 return;
             }
-
-            cart[index].cantidad = newQty;
-            guardarYRenderizar();
-        }
-
-        function removeItem(index) {
-            if(confirm('¿Eliminar producto?')) {
-                cart.splice(index, 1);
-                guardarYRenderizar();
-            }
-        }
-
-        function vaciarCarrito() {
-            if(confirm('¿Vaciar todo el carrito?')) {
-                cart = [];
-                guardarYRenderizar();
-            }
-        }
-
-        function guardarYRenderizar() {
-            localStorage.setItem(CART_KEY, JSON.stringify(cart));
-            renderizarItems();
-            actualizarTotales();
-        }
-
-        async function prellenarDatosUsuario() {
-            const token = localStorage.getItem('access_token');
-            if (!token) return;
-
+            
             try {
-                const res = await fetch('/api/usuarios/me/', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const config = getFetchConfig('PATCH', { cantidad: nuevaCantidad });
+                console.log(`🔄 Actualizando cantidad: ${item.carrito_id} a ${nuevaCantidad}`);
+                
+                const res = await fetch(`${API_BASE_URL}/carrito/${carritoId}/`, config);
+                
                 if (res.ok) {
-                    const user = await res.json();
-                    document.getElementById('cliente_nombre').value = user.username;
-                    document.getElementById('cliente_email').value = user.email;
+                    item.cantidad = nuevaCantidad;
+                    item.stock_disponible = stockDisponible;
+                    renderizarItems();
+                    actualizarResumen();
+                    mostrarEstado('Cantidad actualizada', 'success');
+                    mostrarNotificacion('Cantidad actualizada', 'success');
+                } else {
+                    const error = await res.json();
+                    console.error('❌ Error actualizando:', error);
+                    mostrarEstado('Error al actualizar cantidad', 'danger');
+                    mostrarNotificacion('Error al actualizar cantidad', 'error');
                 }
-            } catch (e) { console.log('Invitado'); }
+            } catch (e) {
+                console.error('❌ Error actualizando:', e);
+                mostrarEstado('Error de conexión', 'danger');
+                mostrarNotificacion('Error de conexión', 'error');
+            }
         }
-
+        
+        // ============================================
+        // ELIMINAR ITEM
+        // ============================================
+        async function eliminarItem(carritoId) {
+            if (!confirm('¿Eliminar este producto del carrito?')) return;
+            
+            try {
+                const config = getFetchConfig('DELETE');
+                console.log(`🗑️ Eliminando item: ${carritoId}`);
+                
+                const res = await fetch(`${API_BASE_URL}/carrito/${carritoId}/`, config);
+                
+                if (res.ok) {
+                    cart = cart.filter(item => item.carrito_id !== carritoId);
+                    renderizarItems();
+                    actualizarResumen();
+                    mostrarEstado('Producto eliminado', 'success');
+                    mostrarNotificacion('Producto eliminado del carrito', 'success');
+                } else {
+                    const error = await res.json();
+                    console.error('❌ Error eliminando:', error);
+                    mostrarEstado('Error al eliminar producto', 'danger');
+                    mostrarNotificacion('Error al eliminar producto', 'error');
+                }
+            } catch (e) {
+                console.error('❌ Error eliminando:', e);
+                mostrarEstado('Error de conexión', 'danger');
+                mostrarNotificacion('Error de conexión', 'error');
+            }
+        }
+        
+        // ============================================
+        // VACIAR CARRITO
+        // ============================================
+        async function vaciarCarrito() {
+            if (cart.length === 0) return;
+            
+            if (!confirm(`¿Vaciar todo el carrito? (${cart.length} productos)`)) return;
+            
+            try {
+                const config = getFetchConfig('DELETE');
+                console.log(`🗑️ Vaciando carrito completo`);
+                
+                const res = await fetch(`${API_BASE_URL}/carrito/`, config);
+                
+                if (res.ok) {
+                    cart = [];
+                    renderizarItems();
+                    actualizarResumen();
+                    mostrarEstado('Carrito vaciado', 'success');
+                    mostrarNotificacion('Carrito vaciado', 'success');
+                } else {
+                    const error = await res.json();
+                    console.error('❌ Error vaciando:', error);
+                    mostrarEstado('Error al vaciar carrito', 'danger');
+                    mostrarNotificacion('Error al vaciar carrito', 'error');
+                }
+            } catch (e) {
+                console.error('❌ Error vaciando:', e);
+                mostrarEstado('Error de conexión', 'danger');
+                mostrarNotificacion('Error de conexión', 'error');
+            }
+        }
+        
+        // ============================================
+        // ACTUALIZAR RESUMEN
+        // ============================================
+        function actualizarResumen() {
+            if (cart.length === 0) {
+                document.getElementById('summary-subtotal').textContent = '$0';
+                document.getElementById('summary-total').textContent = '$0';
+                document.getElementById('summary-items-count').textContent = '0';
+                if (document.getElementById('btn-pagar')) {
+                    document.getElementById('btn-pagar').disabled = true;
+                }
+                return;
+            }
+            
+            const totalItems = cart.reduce((sum, item) => sum + item.cantidad, 0);
+            const subtotal = cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+            
+            document.getElementById('summary-subtotal').textContent = '$' + subtotal.toLocaleString('es-CL');
+            document.getElementById('summary-total').textContent = '$' + subtotal.toLocaleString('es-CL');
+            document.getElementById('summary-items-count').textContent = totalItems + (totalItems !== 1 ? ' productos' : ' producto');
+            
+            // Verificar si se puede pagar
+            const puedePagar = cart.every(item => item.cantidad <= item.stock_disponible);
+            if (document.getElementById('btn-pagar')) {
+                document.getElementById('btn-pagar').disabled = !puedePagar;
+            }
+        }
+        
+        // ============================================
+        // VERIFICAR STOCK
+        // ============================================
+        function verificarStockGlobal(hayError = false) {
+            const stockWarning = document.getElementById('stock-warning');
+            const stockErrorDetails = document.getElementById('stock-error-details');
+            const btnPagar = document.getElementById('btn-pagar');
+            
+            if (!stockWarning || !stockErrorDetails || !btnPagar) return;
+            
+            if (cart.length === 0) {
+                stockWarning.classList.add('d-none');
+                btnPagar.disabled = true;
+                return;
+            }
+            
+            if (hayError === false) {
+                hayError = cart.some(item => item.cantidad > item.stock_disponible);
+            }
+            
+            if (hayError) {
+                stockWarning.classList.remove('d-none');
+                const productosSinStock = cart.filter(item => item.cantidad > item.stock_disponible);
+                
+                if (productosSinStock.length === 1) {
+                    stockErrorDetails.textContent = `${productosSinStock[0].nombre} excede stock`;
+                } else {
+                    stockErrorDetails.textContent = `${productosSinStock.length} productos exceden stock`;
+                }
+                
+                btnPagar.disabled = true;
+                btnPagar.innerHTML = '<i class="bi bi-x-circle me-2"></i> Stock Insuficiente';
+                btnPagar.classList.remove('btn-success');
+                btnPagar.classList.add('btn-danger');
+            } else {
+                stockWarning.classList.add('d-none');
+                if (btnPagar) {
+                    btnPagar.disabled = false;
+                    btnPagar.innerHTML = '<i class="bi bi-credit-card me-2"></i> Confirmar y Pagar';
+                    btnPagar.classList.remove('btn-danger');
+                    btnPagar.classList.add('btn-success');
+                }
+            }
+        }
+        
+        // ============================================
+        // SETUP LISTENERS
+        // ============================================
+        function setupEventListeners() {
+            // Validación formulario
+            const inputs = document.querySelectorAll('#order-form input, #order-form textarea');
+            inputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    if (input.checkValidity()) {
+                        input.classList.remove('is-invalid');
+                        input.classList.add('is-valid');
+                    } else {
+                        input.classList.remove('is-valid');
+                        input.classList.add('is-invalid');
+                    }
+                });
+            });
+            
+            // Términos y condiciones
+            const terminos = document.getElementById('terminos');
+            if (terminos) {
+                terminos.addEventListener('change', () => {
+                    const btnPagar = document.getElementById('btn-pagar');
+                    if (btnPagar) {
+                        btnPagar.disabled = !terminos.checked;
+                    }
+                });
+            }
+        }
+        
+        // ============================================
+        // PROCESAR PAGO
+        // ============================================
         async function procesarPago() {
             if (cart.length === 0) return;
             
-            // Re-validación final antes de la API (por si el stock cambió)
-            validarStockGlobal(true); 
-            if (document.getElementById('btn-pagar').disabled) {
-                 alert('Por favor, ajusta la cantidad de los productos en rojo antes de pagar.');
-                 return;
+            // Validar stock
+            for (let item of cart) {
+                if (item.cantidad > item.stock_disponible) {
+                    mostrarEstado(`Stock insuficiente para ${item.nombre}`, 'danger');
+                    mostrarNotificacion(`Stock insuficiente para ${item.nombre}`, 'error');
+                    return;
+                }
             }
-
-            // HTML5 Validation
+            
+            // Validar formulario
             const form = document.getElementById('order-form');
             if (!form.checkValidity()) {
                 form.reportValidity();
                 return;
             }
-
-            const btn = document.getElementById('btn-pagar');
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Procesando...';
-
-            const total = cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
             
-            const payload = {
-                nombre_cliente: document.getElementById('cliente_nombre').value,
-                email_cliente: document.getElementById('cliente_email').value,
-                telefono_cliente: document.getElementById('cliente_telefono').value,
-                direccion_cliente: document.getElementById('cliente_direccion').value,
+            const btnPagar = document.getElementById('btn-pagar');
+            const originalText = btnPagar.innerHTML;
+            btnPagar.disabled = true;
+            btnPagar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Procesando...';
+            
+            // Preparar datos
+            const total = cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+            const orderData = {
+                nombre_cliente: document.getElementById('cliente_nombre').value.trim(),
+                email_cliente: document.getElementById('cliente_email').value.trim(),
+                telefono_cliente: document.getElementById('cliente_telefono').value.trim(),
+                direccion_cliente: document.getElementById('cliente_direccion').value.trim(),
                 total: total,
                 estado: 'pendiente',
-                items: cart.map(i => ({
-                    producto: i.id,
-                    cantidad: i.cantidad,
-                    precio_unitario: i.precio
+                items: cart.map(item => ({
+                    producto: item.producto_id,
+                    cantidad: item.cantidad,
+                    precio_unitario: item.precio
                 }))
             };
-
+            
             try {
-                const res = await fetch('/api/ordenes/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
+                const config = getFetchConfig('POST', orderData);
+                console.log('💰 Procesando pago...', orderData);
+                
+                const res = await fetch(`${API_BASE_URL}/ordenes/`, config);
+                
                 if (res.ok) {
-                    const data = await res.json();
-                    localStorage.removeItem(CART_KEY);
-                    window.location.href = `/tienda/confirmacion/?id=${data.id}`;
+                    const orden = await res.json();
+                    console.log('✅ Orden creada:', orden);
+                    
+                    // Vaciar carrito
+                    await vaciarCarrito();
+                    
+                    mostrarNotificacion('✅ ¡Orden creada exitosamente! Redirigiendo...', 'success');
+                    
+                    // Redirigir
+                    setTimeout(() => {
+                        window.location.href = `/tienda/confirmacion/?id=${orden.id}`;
+                    }, 2000);
+                    
                 } else {
                     const error = await res.json();
-                    alert('Error: ' + JSON.stringify(error));
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
+                    console.error('❌ Error creando orden:', error);
+                    mostrarEstado('Error: ' + (error.detail || JSON.stringify(error)), 'danger');
+                    mostrarNotificacion('Error al crear la orden', 'error');
+                    btnPagar.disabled = false;
+                    btnPagar.innerHTML = originalText;
                 }
             } catch (e) {
-                console.error(e);
-                alert('Error de conexión');
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+                console.error('❌ Error:', e);
+                mostrarEstado('Error de conexión', 'danger');
+                mostrarNotificacion('Error de conexión', 'error');
+                btnPagar.disabled = false;
+                btnPagar.innerHTML = originalText;
             }
         }
+        
+        // ============================================
+        // FUNCIONES DE DEBUG
+        // ============================================
+        window.debugCarrito = function() {
+            console.log('🔧 DEBUG CARRITO');
+            console.log('Cart:', cart);
+            console.log('Inventario:', inventarioGlobal);
+            console.log('CSRF Token:', getCSRFToken());
+        };
+        
+        // Forzar recarga del carrito
+        window.recargarCarrito = async function() {
+            console.log('🔄 Recargando carrito...');
+            mostrarEstado('Recargando carrito...', 'info');
+            await cargarCarritoDesdeAPI();
+        };
+        
     </script>
 </body>
 </html>
