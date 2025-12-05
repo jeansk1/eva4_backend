@@ -337,153 +337,89 @@ class OrdenViewSet(viewsets.ModelViewSet):
 class ItemCarritoViewSet(viewsets.ModelViewSet):
     """
     Vista para manejar el carrito de compras.
-    FUNCIONA PARA USUARIOS AUTENTICADOS Y ANÓNIMOS.
+    Maneja la lógica de sumar cantidades si el producto ya existe.
     """
     queryset = ItemCarrito.objects.all()
     serializer_class = ItemCarritoSerializer
     permission_classes = [AllowAny]
     
     def get_queryset(self):
-        """
-        Devuelve los items del carrito basados en:
-        - Usuario autenticado: items de su usuario
-        - Usuario anónimo: items de su sesión
-        """
-        # DEBUG información
-        print(f"\n🎯 CARRITO - get_queryset()")
-        print(f"  📍 URL: {self.request.path}")
-        print(f"  🆔 Session Key: {self.request.session.session_key}")
-        print(f"  👤 Usuario: {self.request.user}")
-        print(f"  🔐 Autenticado: {self.request.user.is_authenticated}")
-        
-        # FORZAR creación de sesión si no existe (para anónimos)
+        """Devuelve los items del usuario o de la sesión anónima"""
         if not self.request.session.session_key:
-            print("  ⚠️ No hay sesión - creando...")
             self.request.session.create()
-            print(f"  ✅ Nueva sesión: {self.request.session.session_key}")
-        
+            
         session_key = self.request.session.session_key
         
-        # Si el usuario está autenticado, mostrar sus items
         if self.request.user.is_authenticated:
-            print(f"  👤 Buscando items del usuario: {self.request.user.username}")
-            queryset = ItemCarrito.objects.filter(
+            # Si el usuario entra, mostramos sus items + los de su sesión actual
+            return ItemCarrito.objects.filter(
                 Q(usuario=self.request.user) | Q(clave_sesion=session_key)
-            )
+            ).order_by('-agregado_en')
         else:
-            # Usuario anónimo - buscar por session key
-            print(f"  🎭 Usuario anónimo - buscando por session: {session_key}")
-            queryset = ItemCarrito.objects.filter(clave_sesion=session_key)
-        
-        print(f"  📦 Items encontrados: {queryset.count()}")
-        
-        # DEBUG: Mostrar todos los items en DB
-        all_items = ItemCarrito.objects.all()
-        print(f"  🗄️ TOTAL items en DB: {all_items.count()}")
-        for item in all_items:
-            usuario_info = item.usuario.username if item.usuario else f"Anónimo({item.clave_sesion[:8] if item.clave_sesion else 'SinSesion'})"
-            print(f"    - ID:{item.id} | Producto:{item.producto.nombre[:15] if item.producto else 'None'} | "
-                  f"Usuario:{usuario_info} | Cantidad:{item.cantidad}")
-        
-        return queryset
+            # Usuario anónimo
+            return ItemCarrito.objects.filter(clave_sesion=session_key).order_by('-agregado_en')
     
     def perform_create(self, serializer):
-        """
-        Guarda el item del carrito automáticamente asignando:
-        - usuario (si está autenticado)
-        - clave_sesion (si es anónimo)
-        """
-        print(f"\n🎯 CARRITO - perform_create()")
-        print(f"  📦 Datos recibidos: {self.request.data}")
-        print(f"  🆔 Session Key: {self.request.session.session_key}")
-        print(f"  👤 Usuario: {self.request.user}")
-        
-        # FORZAR sesión si no existe
+        """Asigna usuario o sesión al guardar"""
         if not self.request.session.session_key:
             self.request.session.create()
-            print(f"  ✅ Sesión creada: {self.request.session.session_key}")
         
         session_key = self.request.session.session_key
+        save_data = {'clave_sesion': session_key}
         
-        # Preparar datos para guardar
-        save_data = {}
-        
-        # Si el usuario está autenticado, asignarlo
         if self.request.user.is_authenticated:
             save_data['usuario'] = self.request.user
-            print(f"  👤 Asignando al usuario: {self.request.user.username}")
-        
-        # Siempre asignar la sesión (para anónimos y autenticados)
-        save_data['clave_sesion'] = session_key
-        print(f"  🔐 Asignando session key: {session_key}")
-        
-        # Guardar con los datos adicionales
+            
         serializer.save(**save_data)
-        
-        print(f"  ✅ Item guardado exitosamente")
-    
+
     def create(self, request, *args, **kwargs):
         """
-        Maneja la creación de items en el carrito.
-        Si ya existe el producto, incrementa la cantidad.
+        Lógica personalizada: Si el producto ya existe en el carrito, SUMA la cantidad.
         """
-        print(f"\n🎯 CARRITO - CREATE endpoint llamado")
-        print(f"  📨 Data: {request.data}")
-        print(f"  🍪 Cookies: {request.COOKIES}")
-        print(f"  🆔 Session Key: {request.session.session_key}")
-        
-        # 1. Verificar que tenemos sesión
+        try:
+            # 1. Obtener datos limpios
+            producto_id = int(request.data.get('producto'))
+            cantidad = int(request.data.get('cantidad', 1))
+        except (ValueError, TypeError):
+            return Response({'error': 'Datos inválidos'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2. Asegurar sesión
         if not request.session.session_key:
             request.session.create()
-            print(f"  ✅ Sesión creada: {request.session.session_key}")
-        
         session_key = request.session.session_key
+        user = request.user
+
+        # 3. Buscar si YA existe este producto en el carrito del usuario/sesión
+        query = Q(producto_id=producto_id)
         
-        # 2. Validar datos básicos
-        producto_id = request.data.get('producto')
-        cantidad = int(request.data.get('cantidad', 1))
-        
-        if not producto_id:
-            return Response(
-                {'error': 'El campo "producto" es requerido'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # 3. Verificar que el producto existe
-        try:
-            producto = Producto.objects.get(id=producto_id)
-        except Producto.DoesNotExist:
-            return Response(
-                {'error': f'Producto con ID {producto_id} no encontrado'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
-        # 4. Buscar item existente
-        # Para usuarios autenticados: buscar por usuario + producto
-        # Para anónimos: buscar por session_key + producto
-        if request.user.is_authenticated:
-            item_existente = ItemCarrito.objects.filter(
-                usuario=request.user,
-                producto=producto
-            ).first()
+        if user.is_authenticated:
+            # Busca por usuario O por sesión (para atrapar items justo antes del login)
+            query &= (Q(usuario=user) | Q(clave_sesion=session_key))
         else:
-            item_existente = ItemCarrito.objects.filter(
-                clave_sesion=session_key,
-                producto=producto,
-                usuario__isnull=True  # Solo items anónimos
-            ).first()
-        
-        # 5. Si ya existe, actualizar cantidad
+            query &= Q(clave_sesion=session_key)
+
+        # Buscamos el item más reciente que coincida
+        item_existente = ItemCarrito.objects.filter(query).first()
+
+        # 4. Lógica de Fusión
         if item_existente:
-            print(f"  🔄 Item existente encontrado, actualizando cantidad")
+            print(f"🔄 Producto {producto_id} ya existe. Sumando {cantidad} unidades.")
+            
+            # Actualizamos cantidad
             item_existente.cantidad += cantidad
+            
+            # Si el usuario está logueado pero el item era anónimo, nos lo "apropiamos"
+            if user.is_authenticated and not item_existente.usuario:
+                item_existente.usuario = user
+            
             item_existente.save()
             
+            # Devolvemos el item actualizado
             serializer = self.get_serializer(item_existente)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        
-        # 6. Si no existe, crear nuevo
-        print(f"  🆕 Creando nuevo item")
+
+        # 5. Si no existe, creamos uno nuevo (comportamiento normal)
+        print(f"🆕 Creando nuevo item para producto {producto_id}")
         return super().create(request, *args, **kwargs)
 
 # --- Vistas de Reporte (Plan Estándar) ---

@@ -245,6 +245,7 @@ class ItemOrdenSerializer(serializers.ModelSerializer):
 class OrdenSerializer(serializers.ModelSerializer):
     items = ItemOrdenSerializer(many=True) 
     nombre_sucursal = serializers.SerializerMethodField()
+    
     class Meta:
         model = Orden
         fields = '__all__'
@@ -254,10 +255,41 @@ class OrdenSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items_data = validated_data.pop('items')
+        
         with transaction.atomic():
+            # 1. Crear la Orden
             orden = Orden.objects.create(**validated_data)
+            
             for item_data in items_data:
-                ItemOrden.objects.create(orden=orden, **item_data)
+                producto = item_data['producto']
+                cantidad = item_data['cantidad']
+                precio_unitario = item_data['precio_unitario']
+                
+                # 2. Crear el Item de Orden
+                ItemOrden.objects.create(
+                    orden=orden, 
+                    producto=producto, 
+                    cantidad=cantidad, 
+                    precio_unitario=precio_unitario
+                )
+                
+                # 3. DESCONTAR STOCK (LÓGICA NUEVA)
+                # Buscamos el primer inventario que tenga ese producto y stock suficiente
+                # (Como es e-commerce, tomamos de cualquier sucursal disponible si no se especifica una)
+                inventario = Inventario.objects.select_for_update().filter(
+                    producto=producto, 
+                    stock__gte=cantidad
+                ).first()
+                
+                if inventario:
+                    inventario.stock -= cantidad
+                    inventario.save()
+                else:
+                    # Si llegamos aquí es porque alguien compró el último justo antes que tú
+                    raise serializers.ValidationError(
+                        f"No hay stock suficiente para el producto {producto.nombre}"
+                    )
+            
             return orden
 
 # --- Carrito Interno ---
@@ -266,15 +298,20 @@ class ItemCarritoSerializer(serializers.ModelSerializer):
     precio_producto = serializers.DecimalField(source='producto.precio', read_only=True, max_digits=10, decimal_places=2)
     subtotal = serializers.SerializerMethodField()
     sku_producto = serializers.CharField(source='producto.sku', read_only=True)
+    # CORRECCIÓN: Agregamos producto_id para que el frontend pueda leerlo
+    producto_id = serializers.PrimaryKeyRelatedField(source='producto', read_only=True)
+    imagen_producto = serializers.ImageField(source='producto.imagen', read_only=True)
     
     class Meta:
         model = ItemCarrito
         fields = (
             'id', 
-            'producto', 
+            'producto',         # Se usa para escribir (POST)
+            'producto_id',      # Se usa para leer (GET) - CORRECCIÓN
             'nombre_producto',
             'sku_producto',
-            'precio_producto', 
+            'precio_producto',
+            'imagen_producto', 
             'cantidad', 
             'subtotal',
             'clave_sesion',
@@ -289,9 +326,11 @@ class ItemCarritoSerializer(serializers.ModelSerializer):
             'sku_producto',
             'clave_sesion',
             'usuario',
-            'agregado_en'
+            'agregado_en',
+            'producto_id' # CORRECCIÓN
         )
         extra_kwargs = {
+            # Mantenemos write_only aquí para el input, pero ya tenemos producto_id para el output
             'producto': {'required': True, 'write_only': True},
             'cantidad': {'required': True, 'min_value': 1}
         }
@@ -306,24 +345,21 @@ class ItemCarritoSerializer(serializers.ModelSerializer):
     
     def validate(self, data):
         """Validaciones adicionales"""
+        # CORRECCIÓN: Usamos .get() para evitar errores si el campo no viene (updates parciales)
         producto = data.get('producto')
-        cantidad = data.get('cantidad', 1)
+        cantidad = data.get('cantidad')
         
-        # Verificar que el producto existe y está activo
-        if not Producto.objects.filter(id=producto.id).exists():
-            raise serializers.ValidationError(
-                {"producto": "Producto no encontrado"}
-            )
+        # 1. Validar producto SOLO si se está enviando (creación o cambio de producto)
+        if producto:
+            if not Producto.objects.filter(id=producto.id).exists():
+                raise serializers.ValidationError({"producto": "Producto no encontrado"})
         
-        # Verificar cantidad positiva
-        if cantidad <= 0:
-            raise serializers.ValidationError(
-                {"cantidad": "La cantidad debe ser mayor a 0"}
-            )
+        # 2. Validar cantidad SOLO si se está enviando
+        if cantidad is not None:
+            if cantidad <= 0:
+                raise serializers.ValidationError({"cantidad": "La cantidad debe ser mayor a 0"})
         
         return data
     
     def create(self, validated_data):
-        """Sobreescribir create para manejar lógica personalizada"""
-        # Esta lógica ya se maneja en la vista
         return super().create(validated_data)

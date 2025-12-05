@@ -6,6 +6,7 @@ from django.conf.urls.static import static
 from django.views.generic import TemplateView
 
 
+
 urlpatterns = [
     # --- ADMINISTRACIÓN Y API ---
     path('admin/', admin.site.urls),

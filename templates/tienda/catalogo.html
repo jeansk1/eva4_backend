@@ -10,119 +10,39 @@
     
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
-        
-        /* Hero Section */
         .hero-section {
             background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
-            color: white;
-            padding: 4rem 0;
-            margin-bottom: 3rem;
-            position: relative;
-            overflow: hidden;
+            color: white; padding: 4rem 0; margin-bottom: 3rem;
+            position: relative; overflow: hidden;
         }
-        
         .hero-pattern {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0.1;
-            background-image: radial-gradient(#fff 1px, transparent 1px);
-            background-size: 20px 20px;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.1;
+            background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 20px 20px;
         }
-
-        /* Product Cards */
         .product-card {
-            border: none;
-            border-radius: 12px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            overflow: hidden;
-            background: white;
-            height: 100%;
+            border: none; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s;
+            overflow: hidden; background: white; height: 100%;
         }
-        
-        .product-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
-        }
-
+        .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
         .card-img-placeholder {
-            height: 200px;
-            background-color: #f1f3f5;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #adb5bd;
-            font-size: 3rem;
+            height: 200px; background-color: #f1f3f5; display: flex; align-items: center; justify-content: center;
+            color: #adb5bd; font-size: 3rem;
         }
-        
-        .card-img-top {
-            height: 200px;
-            object-fit: contain;
-            padding: 15px;
-        }
-
+        .card-img-top { height: 200px; object-fit: contain; padding: 15px; }
         .badge-category {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            font-size: 0.7rem;
-            padding: 0.5em 0.8em;
-            border-radius: 30px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            z-index: 1; 
+            position: absolute; top: 12px; right: 12px; font-size: 0.7rem; padding: 0.5em 0.8em;
+            border-radius: 30px; text-transform: uppercase; letter-spacing: 0.5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 1; 
         }
-
-        /* Sidebar Filters */
         .filter-btn {
-            border: none;
-            background: transparent;
-            text-align: left;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            color: #495057;
-            font-weight: 500;
-            transition: all 0.2s;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
+            border: none; background: transparent; text-align: left; padding: 0.75rem 1rem;
+            border-radius: 8px; color: #495057; font-weight: 500; transition: all 0.2s;
+            display: flex; justify-content: space-between; align-items: center; width: 100%;
         }
-        
-        .filter-btn:hover {
-            background-color: #e9ecef;
-            color: #0d6efd;
-        }
-        
-        .filter-btn.active {
-            background-color: #e7f1ff;
-            color: #0d6efd;
-            font-weight: 600;
-        }
-
-        /* Navbar */
+        .filter-btn:hover { background-color: #e9ecef; color: #0d6efd; }
+        .filter-btn.active { background-color: #e7f1ff; color: #0d6efd; font-weight: 600; }
         .navbar { box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
         .navbar-brand { font-weight: 700; letter-spacing: -0.5px; }
-
-        .card-body { position: relative; z-index: 2; } 
-        
-        /* Notificaciones */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            min-width: 300px;
-            animation: slideIn 0.3s ease-out;
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
     </style>
 </head>
 <body>
@@ -132,13 +52,10 @@
             <a class="navbar-brand text-primary" href="/tienda/">
                 <i class="bi bi-box-seam-fill me-2"></i>TemucoSoft
             </a>
-            
             <div class="d-flex align-items-center gap-3 ms-auto">
                 <a class="nav-link position-relative text-secondary" href="/tienda/carrito/">
                     <i class="bi bi-cart3 fs-4"></i>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white d-none" id="contadorCarrito">
-                        0
-                    </span>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white d-none" id="contadorCarrito">0</span>
                 </a>
                 <a class="btn btn-outline-primary btn-sm rounded-pill px-3" href="/login/">
                     <i class="bi bi-person-circle me-1"></i> Staff
@@ -152,14 +69,14 @@
         <div class="container position-relative z-1">
             <div class="row align-items-center">
                 <div class="col-lg-6 text-center text-lg-start mb-4 mb-lg-0">
-                    <span class="badge bg-white text-primary mb-2 px-3 py-2 rounded-pill">NUEVA COLECCIÓN 2025</span>
+                    <span class="badge bg-white text-primary mb-2 px-3 py-2 rounded-pill">NUEVA COLECCIÓN</span>
                     <h1 class="display-4 fw-bold mb-3">Todo para tu negocio</h1>
                     <p class="lead opacity-90 mb-0">Explora nuestro catálogo completo con stock garantizado.</p>
                 </div>
                 <div class="col-lg-6">
                     <div class="bg-white p-2 rounded-pill shadow-lg d-flex">
                         <span class="input-group-text bg-transparent border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" class="form-control border-0 shadow-none" placeholder="¿Qué estás buscando hoy?" id="buscador">
+                        <input type="text" class="form-control border-0 shadow-none" placeholder="Buscar productos..." id="buscador">
                     </div>
                 </div>
             </div>
@@ -171,49 +88,20 @@
             <div class="col-lg-3 d-none d-lg-block">
                 <div class="sticky-top" style="top: 90px;">
                     <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-white fw-bold py-3">
-                            <i class="bi bi-tags me-2"></i>Categorías
-                        </div>
+                        <div class="card-header bg-white fw-bold py-3"><i class="bi bi-tags me-2"></i>Categorías</div>
                         <div class="card-body p-2">
                             <div class="d-flex flex-column gap-1" id="filtros-categoria">
-                                <button class="filter-btn active" onclick="filtrar(this, '')">
-                                    <span>Todas</span>
-                                    <span class="badge bg-secondary rounded-pill opacity-50" id="count-total">-</span>
-                                </button>
-                                <button class="filter-btn" onclick="filtrar(this, 'electronica')">
-                                    <span><i class="bi bi-cpu me-2"></i>Electrónica</span>
-                                </button>
-                                <button class="filter-btn" onclick="filtrar(this, 'ropa')">
-                                    <span><i class="bi bi-bag me-2"></i>Ropa</span>
-                                </button>
-                                <button class="filter-btn" onclick="filtrar(this, 'alimentos')">
-                                    <span><i class="bi bi-basket me-2"></i>Alimentos</span>
-                                </button>
-                                <button class="filter-btn" onclick="filtrar(this, 'bebidas')">
-                                    <span><i class="bi bi-cup-straw me-2"></i>Bebidas</span>
-                                </button>
-                                <button class="filter-btn" onclick="filtrar(this, 'limpieza')">
-                                    <span><i class="bi bi-stars me-2"></i>Limpieza</span>
-                                </button>
-                                <button class="filter-btn" onclick="filtrar(this, 'otros')">
-                                    <span><i class="bi bi-box me-2"></i>Otros</span>
-                                </button>
+                                <button class="filter-btn active" onclick="filtrar(this, '')"><span>Todas</span><span class="badge bg-secondary rounded-pill opacity-50" id="count-total">-</span></button>
+                                <button class="filter-btn" onclick="filtrar(this, 'electronica')"><span><i class="bi bi-cpu me-2"></i>Electrónica</span></button>
+                                <button class="filter-btn" onclick="filtrar(this, 'ropa')"><span><i class="bi bi-bag me-2"></i>Ropa</span></button>
+                                <button class="filter-btn" onclick="filtrar(this, 'alimentos')"><span><i class="bi bi-basket me-2"></i>Alimentos</span></button>
+                                <button class="filter-btn" onclick="filtrar(this, 'bebidas')"><span><i class="bi bi-cup-straw me-2"></i>Bebidas</span></button>
+                                <button class="filter-btn" onclick="filtrar(this, 'limpieza')"><span><i class="bi bi-stars me-2"></i>Limpieza</span></button>
+                                <button class="filter-btn" onclick="filtrar(this, 'otros')"><span><i class="bi bi-box me-2"></i>Otros</span></button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="col-12 d-lg-none mb-3">
-                <select class="form-select shadow-sm" onchange="filtrar(this, this.value)">
-                    <option value="">Todas las categorías</option>
-                    <option value="electronica">Electrónica</option>
-                    <option value="ropa">Ropa</option>
-                    <option value="alimentos">Alimentos</option>
-                    <option value="bebidas">Bebidas</option>
-                    <option value="limpieza">Limpieza</option>
-                    <option value="otros">Otros</option>
-                </select>
             </div>
 
             <div class="col-lg-9">
@@ -227,82 +115,66 @@
         </div>
     </div>
 
-    <footer class="bg-white border-top py-4 mt-auto">
-        <div class="container text-center">
-            <p class="text-muted mb-0 small">&copy; 2025 TemucoSoft S.A. Todos los derechos reservados.</p>
-        </div>
-    </footer>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // ============================================
-        // CONFIGURACIÓN GLOBAL
-        // ============================================
         let productosGlobal = [];
         let inventarioGlobal = {};
+        let carritoUsuario = {};
 
-        // ============================================
-        // FUNCIÓN CLAVE: OBTENER CSRF TOKEN
-        // ============================================
         function getCSRFToken() {
             const cookies = document.cookie.split(';');
             for (let cookie of cookies) {
                 const [name, value] = cookie.trim().split('=');
-                if (name === 'csrftoken') {
-                    console.log('🔐 CSRF Token encontrado');
-                    return value;
-                }
+                if (name === 'csrftoken') return value;
             }
-            console.warn('⚠️ CSRF token no encontrado');
             return null;
         }
 
-        // ============================================
-        // INICIALIZACIÓN
-        // ============================================
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Catálogo iniciado');
-            cargarInventarioStock().then(cargarCatalogo);
-            actualizarContadorBackend();
-            
+            console.log('🚀 Iniciando Catálogo...');
+            Promise.all([cargarInventarioStock(), cargarCarritoActual()])
+                .then(() => cargarCatalogo());
+
             document.getElementById('buscador').addEventListener('input', (e) => {
                 aplicarFiltros(e.target.value, null);
             });
         });
 
-        // ============================================
-        // CARGAR INVENTARIO
-        // ============================================
         async function cargarInventarioStock() {
             try {
-                const res = await fetch('/api/inventario/', { 
-                    credentials: 'include' 
-                }); 
-                
+                const res = await fetch('/api/inventario/', { credentials: 'include' }); 
                 if (res.ok) {
                     const data = await res.json();
-                    const listaInventario = data.results || data;
-                    
-                    listaInventario.forEach(item => {
-                        const stock = parseInt(item.stock) || 0;
-                        const prodId = item.producto;
-                        inventarioGlobal[prodId] = (inventarioGlobal[prodId] || 0) + stock; 
+                    const lista = data.results || data;
+                    lista.forEach(item => {
+                        inventarioGlobal[item.producto] = (inventarioGlobal[item.producto] || 0) + parseInt(item.stock); 
                     });
                 }
-            } catch(e) {
-                console.warn("Error inventario:", e);
-            }
+            } catch(e) { console.warn("Error inventario:", e); }
         }
 
-        // ============================================
-        // CARGAR CATÁLOGO
-        // ============================================
+        async function cargarCarritoActual() {
+            try {
+                const res = await fetch('/api/carrito/', { credentials: 'include' });
+                if (res.ok) {
+                    const data = await res.json();
+                    const items = data.results || data;
+                    carritoUsuario = {};
+                    let totalItems = 0;
+                    items.forEach(item => {
+                        const pId = item.producto_id || item.producto;
+                        const qty = item.cantidad || 0;
+                        carritoUsuario[pId] = (carritoUsuario[pId] || 0) + qty;
+                        totalItems += qty;
+                    });
+                    actualizarBadge(totalItems);
+                }
+            } catch(e) { console.warn("Error cargando carrito usuario:", e); }
+        }
+
         async function cargarCatalogo() {
             try {
-                const response = await fetch('/api/productos/', { 
-                    credentials: 'include' 
-                });
-                
+                const response = await fetch('/api/productos/', { credentials: 'include' });
                 if (!response.ok) throw new Error('Error al cargar');
                 
                 const data = await response.json();
@@ -312,39 +184,35 @@
                 renderizarProductos(productosGlobal);
 
             } catch (error) {
-                console.error(error);
                 document.getElementById('catalogoProductos').innerHTML = `
                     <div class="col-12 text-center text-danger py-5">
-                        <i class="bi bi-wifi-off display-4 mb-3 d-block"></i>
                         <h5>No pudimos cargar el catálogo</h5>
-                    </div>
-                `;
+                    </div>`;
             }
         }
 
-        // ============================================
-        // RENDERIZAR PRODUCTOS
-        // ============================================
+        // --- RENDERIZADO CON CAMBIO SOLICITADO ---
         function renderizarProductos(lista) {
             const container = document.getElementById('catalogoProductos');
             container.innerHTML = '';
 
             if (lista.length === 0) {
-                container.innerHTML = `
-                    <div class="col-12 text-center py-5">
-                        <i class="bi bi-search text-secondary fs-1 opacity-50 mb-3 d-block"></i>
-                        <h5 class="text-muted">No encontramos productos</h5>
-                    </div>
-                `;
+                container.innerHTML = `<div class="col-12 text-center py-5"><h5 class="text-muted">No encontramos productos</h5></div>`;
                 return;
             }
 
             lista.forEach(p => {
-                const stockDisponible = inventarioGlobal[p.id] || 0; 
-                const isDisabled = stockDisponible <= 0;
+                const stockTotal = inventarioGlobal[p.id] || 0;
+                const enCarrito = carritoUsuario[p.id] || 0;
                 
-                const stockText = isDisabled ? 'AGOTADO' : 'DISPONIBLE';
-                const finalBadgeClass = isDisabled ? 'bg-danger' : 'bg-success';
+                const disponible = stockTotal - enCarrito;
+                const isAgotado = disponible <= 0;
+
+                // CAMBIOS AQUÍ: Texto y Color Rojo
+                const textoBtn = isAgotado ? 'NO DISPONIBLE' : 'Agregar';
+                const claseBtn = isAgotado ? 'btn-danger opacity-75' : 'btn-primary'; // Botón Rojo si agotado
+                const textoBadge = isAgotado ? 'NO DISPONIBLE' : 'DISPONIBLE';
+                const claseBadge = isAgotado ? 'bg-danger' : 'bg-success'; // Badge Rojo
 
                 const imageHtml = p.imagen 
                     ? `<img src="${p.imagen}" class="card-img-top" alt="${p.nombre}">` 
@@ -352,205 +220,104 @@
 
                 const card = `
                     <div class="col">
-                        <div class="card product-card h-100 shadow-sm ${isDisabled ? 'opacity-75' : ''}">
+                        <div class="card product-card h-100 shadow-sm ${isAgotado ? 'opacity-75' : ''}">
                             <div class="position-relative">
-                                <span class="badge ${finalBadgeClass} badge-category shadow-sm">${stockText}</span>
-                                
-                                <a href="/tienda/producto/${p.id}/" class="text-decoration-none">
-                                    ${imageHtml}
-                                </a>
+                                <span class="badge ${claseBadge} badge-category shadow-sm">
+                                    ${textoBadge}
+                                </span>
+                                <a href="/tienda/producto/${p.id}/" class="text-decoration-none">${imageHtml}</a>
                             </div>
-                            
                             <div class="card-body d-flex flex-column p-3">
                                 <a href="/tienda/producto/${p.id}/" class="text-decoration-none text-dark">
                                     <h6 class="card-title fw-bold text-truncate mb-1" title="${p.nombre}">${p.nombre}</h6>
                                 </a>
                                 <p class="card-text small text-muted text-truncate mb-3">${p.descripcion || 'Sin descripción'}</p>
-                                
-                                <div class="mt-auto d-flex align-items-center justify-content-between position-relative" style="z-index: 2;">
+                                <div class="mt-auto d-flex align-items-center justify-content-between">
                                     <div class="fs-5 fw-bold text-dark">$${parseFloat(p.precio).toLocaleString('es-CL')}</div>
-                                    
-                                    <button class="btn btn-sm rounded-pill px-3 ${isDisabled ? 'btn-outline-danger' : 'btn-primary'}" 
-                                        onclick="agregarAlCarrito(${p.id}, event)" 
-                                        ${isDisabled ? 'disabled' : ''}>
-                                        ${isDisabled ? 'Agotado' : '<i class="bi bi-cart-plus"></i> Agregar'}
+                                    <button class="btn btn-sm rounded-pill px-3 ${claseBtn}" 
+                                        onclick="agregarAlCarrito(${p.id}, event)" ${isAgotado ? 'disabled' : ''}>
+                                        <i class="bi bi-cart-plus"></i> ${textoBtn}
                                     </button>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 container.innerHTML += card;
             });
         }
 
-        // ============================================
-        // FILTROS
-        // ============================================
         let categoriaActiva = '';
-
-        function filtrar(btnOrSelect, categoria) {
-            if (btnOrSelect.tagName === 'BUTTON') {
+        function filtrar(btn, cat) {
+            if(btn.tagName === 'BUTTON') {
                 document.querySelectorAll('#filtros-categoria button').forEach(b => b.classList.remove('active'));
-                btnOrSelect.classList.add('active');
+                btn.classList.add('active');
             }
-            
-            categoriaActiva = categoria;
-            const textoBusqueda = document.getElementById('buscador').value;
-            aplicarFiltros(textoBusqueda, categoriaActiva);
+            categoriaActiva = cat;
+            aplicarFiltros(document.getElementById('buscador').value, categoriaActiva);
         }
 
         function aplicarFiltros(texto, categoria) {
             let resultado = productosGlobal;
-
             if (texto) {
                 const t = texto.toLowerCase();
-                resultado = resultado.filter(p => 
-                    p.nombre.toLowerCase().includes(t) || 
-                    p.sku.toLowerCase().includes(t)
-                );
+                resultado = resultado.filter(p => p.nombre.toLowerCase().includes(t));
             }
-
-            if (categoria) {
-                resultado = resultado.filter(p => p.categoria === categoria);
-            }
-
+            if (categoria) resultado = resultado.filter(p => p.categoria === categoria);
             renderizarProductos(resultado);
         }
 
-        // ============================================
-        // FUNCIÓN PRINCIPAL: AGREGAR AL CARRITO (CORREGIDA)
-        // ============================================
         async function agregarAlCarrito(id, event) {
-            console.log('🎯 AGREGAR AL CARRITO - ID:', id);
+            if (event) { event.stopPropagation(); event.preventDefault(); }
             
-            if (event) {
-                event.stopPropagation();
-                event.preventDefault();
+            const stockTotal = inventarioGlobal[id] || 0;
+            const enCarrito = carritoUsuario[id] || 0;
+            
+            if (enCarrito + 1 > stockTotal) {
+                alert("🚫 Stock agotado para este producto.");
+                await cargarCarritoActual();
+                renderizarProductos(productosGlobal);
+                return;
             }
 
             const btn = event.target.closest('button');
             const originalHTML = btn.innerHTML;
-            
-            // Deshabilitar botón
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
 
             try {
-                // OBTENER CSRF TOKEN
                 const csrfToken = getCSRFToken();
-                if (!csrfToken) {
-                    throw new Error('Token de seguridad no encontrado');
-                }
-                
-                console.log('📤 Enviando POST con CSRF token...');
-                
                 const response = await fetch('/api/carrito/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRFToken': csrfToken  // 👈 CLAVE: CSRF Token
-                    },
-                    body: JSON.stringify({
-                        producto: id,
-                        cantidad: 1
-                    }),
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({ producto: id, cantidad: 1 }),
                     credentials: 'include'
                 });
                 
-                console.log('📥 Status:', response.status);
-                
                 if (response.ok) {
-                    const resultado = await response.json();
-                    console.log('✅ Producto agregado:', resultado);
-                    
-                    // Actualizar contador
-                    await actualizarContadorBackend();
-                    
-                    // Feedback visual
-                    btn.classList.remove('btn-primary', 'btn-outline-danger');
-                    btn.classList.add('btn-success');
+                    carritoUsuario[id] = (carritoUsuario[id] || 0) + 1;
+                    actualizarBadge(Object.values(carritoUsuario).reduce((a, b) => a + b, 0));
+                    renderizarProductos(productosGlobal);
+
+                    btn.classList.replace('btn-primary', 'btn-success');
                     btn.innerHTML = '<i class="bi bi-check"></i>';
-                    
-                    setTimeout(() => {
-                        btn.disabled = false;
-                        btn.classList.remove('btn-success');
-                        btn.classList.add('btn-primary');
-                        btn.innerHTML = '<i class="bi bi-cart-plus"></i> Agregar';
-                    }, 1500);
-                    
-                    // Mostrar alerta de éxito
-                    alert('✅ Producto agregado al carrito!');
-                    
                 } else {
                     const error = await response.json();
-                    console.error('❌ Error del backend:', error);
-                    
+                    alert(`Error: ${error.detail || 'No se pudo agregar'}`);
                     btn.disabled = false;
                     btn.innerHTML = originalHTML;
-                    
-                    alert(`❌ Error: ${error.detail || error.error || 'Error al agregar'}`);
                 }
-                
             } catch (error) {
-                console.error('❌ Error de conexión:', error);
-                
                 btn.disabled = false;
                 btn.innerHTML = originalHTML;
-                
-                alert('❌ Error de conexión con el servidor');
             }
         }
 
-        // ============================================
-        // ACTUALIZAR CONTADOR
-        // ============================================
-        async function actualizarContadorBackend() {
-            try {
-                const res = await fetch('/api/carrito/', { 
-                    credentials: 'include' 
-                });
-                if (res.ok) {
-                    const carrito = await res.json();
-                    const total = carrito.reduce((sum, item) => sum + item.cantidad, 0);
-                    
-                    const badge = document.getElementById('contadorCarrito');
-                    badge.textContent = total;
-                    
-                    if (total > 0) {
-                        badge.classList.remove('d-none');
-                    } else {
-                        badge.classList.add('d-none');
-                    }
-                    
-                    return total;
-                }
-            } catch (e) {
-                console.warn("Error actualizando contador:", e);
-            }
-            return 0;
+        function actualizarBadge(total) {
+            const badge = document.getElementById('contadorCarrito');
+            badge.textContent = total;
+            if (total > 0) badge.classList.remove('d-none');
+            else badge.classList.add('d-none');
         }
-
-        // ============================================
-        // DEBUG
-        // ============================================
-        window.testCarrito = async function() {
-            console.log('🧪 Test manual del carrito');
-            
-            // Obtener producto
-            const res = await fetch('/api/productos/', { credentials: 'include' });
-            const productos = await res.json();
-            const lista = productos.results || productos;
-            
-            if (lista.length === 0) return;
-            
-            const producto = lista[0];
-            console.log('Producto:', producto.nombre);
-            
-            // Agregar
-            await agregarAlCarrito(producto.id, {target: {closest: () => ({})}});
-        };
     </script>
 </body>
 </html>

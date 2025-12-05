@@ -8,29 +8,15 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Corregida la sintaxis del color de fondo */
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; } 
         .product-image-box {
-            background-color: white;
-            border-radius: 16px;
-            padding: 4rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.03);
-            min-height: 400px;
+            background-color: white; border-radius: 16px; padding: 4rem;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.03); min-height: 400px;
         }
-        .product-image-box img {
-            max-width: 100%;
-            max-height: 350px;
-            object-fit: contain;
-        }
+        .product-image-box img { max-width: 100%; max-height: 350px; object-fit: contain; }
         .price-tag { font-size: 2.5rem; font-weight: 800; letter-spacing: -1px; color: #198754; }
-        
-        /* Estilo para el mensaje de stock */
         .status-badge { font-size: 1rem; padding: 0.5rem 1rem; border-radius: 8px; }
-        .bg-danger-subtle { background-color: #f8d7da; color: #842029; }
-        
         .animate-fade-in { animation: fadeIn 0.5s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
@@ -68,13 +54,12 @@
 
         <div class="row g-5 d-none animate-fade-in" id="main-content">
             <div class="col-lg-6">
-                <div class="product-image-box" id="product-image-container">
-                    </div>
+                <div class="product-image-box" id="product-image-container"></div>
             </div>
 
             <div class="col-lg-6">
                 <div class="ps-lg-4">
-                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle mb-3" id="prod-cat">CATEGORY</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle mb-3" id="prod-cat">-</span>
                     
                     <h1 class="display-5 fw-bold text-dark mb-2" id="prod-nombre">-</h1>
                     <p class="text-muted small text-uppercase fw-bold ls-1 mb-4">SKU: <span id="prod-sku">-</span></p>
@@ -82,13 +67,14 @@
                     <h2 class="price-tag mb-4 text-success" id="prod-precio">$0</h2>
 
                     <div class="mb-4">
-                        <span id="stock-status-message" class="badge bg-secondary status-badge">Verificando Stock...</span>
+                        <span id="stock-status-message" class="badge bg-secondary status-badge">Verificando...</span>
+                        <p class="text-muted small mt-1" id="stock-detalle-texto"></p>
                     </div>
 
                     <p class="text-secondary lead mb-5" id="prod-desc">...</p>
 
                     <div class="d-grid gap-2 mb-4">
-                        <button class="btn btn-success btn-lg rounded-pill py-3 shadow-sm" onclick="agregarAlCarrito()" id="btn-add-to-cart" disabled>
+                        <button class="btn btn-success btn-lg rounded-pill py-3 shadow-sm" onclick="agregarAlCarritoAPI()" id="btn-add-to-cart" disabled>
                             <i class="bi bi-cart-plus-fill me-2"></i> Agregar al Carrito
                         </button>
                     </div>
@@ -115,181 +101,197 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const urlParams = new URLSearchParams(window.location.search);
-    const CART_KEY = 'carrito_tienda';
     let prodId = urlParams.get('id');
-    
-    // Si no tiene ?id=, intenta buscar en la ruta limpia /producto/5/
     if (!prodId) {
         const parts = window.location.pathname.split('/');
         prodId = parts.find(p => !isNaN(p) && p !== '');
     }
 
     let productoActual = null;
-    let inventarioGlobal = {}; // Cache de stock
+    let inventarioGlobal = {};
+    let carritoUsuario = {};
+
+    function getCSRFToken() {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'csrftoken') return value;
+        }
+        return null;
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // INICIO PRINCIPAL: Llama a la secuencia completa y espera.
         iniciarCargaPrincipal();
-        actualizarContador();
     });
     
-    // --- FUNCIÓN PRINCIPAL DE CARGA (SECUENCIAL) ---
     async function iniciarCargaPrincipal() {
         try {
-            // 1. Cargar el inventario total de la empresa (AWAIT)
-            await cargarInventarioStock(); 
-            
-            // 2. Cargar el producto específico (AWAIT)
-            await cargarProducto();
-            
-            // 3. Si todo lo anterior funcionó, mostramos el contenido.
+            await Promise.all([
+                cargarInventarioStock(), 
+                cargarCarritoActual(),
+                cargarProducto()
+            ]);
+            validarStock();
             document.getElementById('loading-state').classList.add('d-none');
             document.getElementById('main-content').classList.remove('d-none');
-
         } catch(e) {
-            console.error('Fallo en la carga principal:', e);
-            // Mostrar mensaje de error genérico si cualquier paso falla
-            document.getElementById('loading-state').classList.add('d-none');
-            document.querySelector('.container').innerHTML = `
-                <div class="text-center py-5">
-                    <i class="bi bi-emoji-frown display-1 text-muted mb-3"></i>
-                    <h3>Error al cargar el detalle</h3>
-                    <p>Verifique que el producto exista o que el servidor esté activo.</p>
-                    <a href="/tienda/" class="btn btn-primary mt-3">Volver a la Tienda</a>
-                </div>`;
+            console.error('Fallo:', e);
+            document.getElementById('loading-state').innerHTML = `<h5 class="text-danger">Error: Producto no encontrado</h5><a href="/tienda/" class="btn btn-primary mt-3">Volver</a>`;
         }
     }
 
-
-    // --- Carga de Stock (Backend) ---
     async function cargarInventarioStock() {
-        const token = localStorage.getItem('access_token');
-        const headers = {};
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        
         try {
-            const res = await fetch('/api/inventario/', { headers }); 
-            if (!res.ok) {
-                 // Si la API no es pública o el token falla, asumimos stock 0 y no rompemos la carga
-                return; 
+            const res = await fetch('/api/inventario/', { credentials: 'include' }); 
+            if (res.ok) {
+                const data = await res.json();
+                (data.results || data).forEach(item => {
+                    inventarioGlobal[item.producto] = (inventarioGlobal[item.producto] || 0) + parseInt(item.stock); 
+                });
             }
-            
-            const data = await res.json();
-            const listaInventario = data.results || data;
-            
-            // Llenar caché: Sumar el stock total
-            listaInventario.forEach(item => {
-                const stock = parseInt(item.stock) || 0;
-                const pId = item.producto;
-                inventarioGlobal[pId] = (inventarioGlobal[pId] || 0) + stock; 
-            });
-        } catch(e) {
-            console.warn("No se pudo cargar el inventario de stock para el catálogo público.");
-        }
+        } catch(e) { console.warn(e); }
     }
 
+    async function cargarCarritoActual() {
+        try {
+            const res = await fetch('/api/carrito/', { credentials: 'include' });
+            if (res.ok) {
+                const data = await res.json();
+                const items = data.results || data;
+                let totalItems = 0;
+                carritoUsuario = {};
+
+                items.forEach(item => {
+                    const pId = item.producto_id || item.producto;
+                    const qty = item.cantidad || 0;
+                    carritoUsuario[pId] = (carritoUsuario[pId] || 0) + qty;
+                    totalItems += qty;
+                });
+                
+                const badge = document.getElementById('contador-carrito');
+                badge.textContent = totalItems;
+                if(totalItems > 0) badge.classList.remove('d-none');
+            }
+        } catch(e) { console.warn(e); }
+    }
 
     async function cargarProducto() {
-        if(!prodId) return;
+        if(!prodId) throw new Error("ID");
+        const res = await fetch(`/api/productos/${prodId}/`, { credentials: 'include' });
+        if(!res.ok) throw new Error('404');
+        
+        productoActual = await res.json();
 
-        try {
-            const headers = {};
-            const token = localStorage.getItem('access_token');
-            if (token) headers['Authorization'] = `Bearer ${token}`;
+        const imageContainer = document.getElementById('product-image-container');
+        imageContainer.innerHTML = productoActual.imagen 
+            ? `<img src="${productoActual.imagen}" alt="${productoActual.nombre}">`
+            : `<i class="bi bi-card-image text-secondary opacity-25" style="font-size: 8rem;"></i>`;
 
-            const res = await fetch(`/api/productos/${prodId}/`, { headers });
-            
-            if(!res.ok) throw new Error('Producto no encontrado');
-            
-            productoActual = await res.json();
-
-            // 1. INYECTAR IMAGEN Y CONTENIDO
-            const imageContainer = document.getElementById('product-image-container');
-            if (productoActual.imagen) {
-                imageContainer.innerHTML = `<img src="${productoActual.imagen}" alt="${productoActual.nombre}">`;
-                imageContainer.style.padding = '2rem';
-            } else {
-                imageContainer.innerHTML = `<i class="bi bi-card-image text-secondary opacity-25" style="font-size: 8rem;"></i>`;
-            }
-
-            document.getElementById('prod-nombre').textContent = productoActual.nombre;
-            document.getElementById('bread-name').textContent = productoActual.nombre;
-            document.getElementById('prod-desc').textContent = productoActual.descripcion || 'Sin descripción detallada.';
-            document.getElementById('prod-precio').textContent = '$' + parseFloat(productoActual.precio).toLocaleString('es-CL');
-            document.getElementById('prod-cat').textContent = (productoActual.categoria || 'General').toUpperCase();
-            document.getElementById('prod-sku').textContent = productoActual.sku;
-
-            // 2. VALIDAR STOCK Y ESTADO FINAL
-            validarStock();
-
-        } catch (e) {
-            // Propagamos el error hacia iniciarCargaPrincipal para que maneje la vista de error
-            throw new Error(`Fallo al cargar el producto: ${e.message}`);
-        }
+        document.getElementById('prod-nombre').textContent = productoActual.nombre;
+        document.getElementById('bread-name').textContent = productoActual.nombre;
+        document.getElementById('prod-desc').textContent = productoActual.descripcion || 'Sin descripción.';
+        document.getElementById('prod-precio').textContent = '$' + parseFloat(productoActual.precio).toLocaleString('es-CL');
+        document.getElementById('prod-cat').textContent = (productoActual.categoria || 'General').toUpperCase();
+        document.getElementById('prod-sku').textContent = productoActual.sku;
     }
 
+    // --- CAMBIOS EN EL TEXTO Y COLOR ROJO ---
     function validarStock() {
-        const stock = inventarioGlobal[parseInt(prodId)] || 0; 
-        const isAvailable = stock > 0;
+        const stockTotal = inventarioGlobal[parseInt(prodId)] || 0; 
+        const enCarrito = carritoUsuario[parseInt(prodId)] || 0;
+        const disponibleReal = stockTotal - enCarrito;
+        const isAvailable = disponibleReal > 0;
+
         const statusMsg = document.getElementById('stock-status-message');
+        const detalleMsg = document.getElementById('stock-detalle-texto');
         const btn = document.getElementById('btn-add-to-cart');
 
         if (isAvailable) {
-            statusMsg.textContent = '¡En Stock!';
+            statusMsg.textContent = 'En Stock';
             statusMsg.className = 'badge bg-success status-badge';
+            
+            if (enCarrito > 0) {
+                detalleMsg.textContent = `Tienes ${enCarrito} en tu carrito. Quedan ${disponibleReal} disponibles.`;
+            } else {
+                detalleMsg.textContent = `Disponibles: ${stockTotal} unidades.`;
+            }
+
             btn.disabled = false;
             btn.classList.replace('btn-secondary', 'btn-success');
+            btn.classList.replace('btn-danger', 'btn-success');
+            btn.innerHTML = '<i class="bi bi-cart-plus-fill me-2"></i> Agregar al Carrito';
         } else {
-            statusMsg.textContent = 'Agotado';
-            statusMsg.className = 'badge bg-danger status-badge';
+            // CAMBIO: TEXTO "NO DISPONIBLE" EN ROJO
+            statusMsg.textContent = 'NO DISPONIBLE';
+            statusMsg.className = 'badge bg-danger status-badge'; // ROJO
+            
+            if (stockTotal === 0) {
+                detalleMsg.textContent = 'Producto agotado temporalmente.';
+            } else {
+                detalleMsg.textContent = `Ya tienes todas las unidades disponibles (${stockTotal}) en tu carrito.`;
+            }
+
             btn.disabled = true;
-            btn.classList.replace('btn-success', 'btn-secondary'); 
-            btn.innerHTML = '<i class="bi bi-x-circle me-2"></i> Agotado';
+            // Quitamos clases anteriores y forzamos rojo/secundario visualmente
+            btn.classList.remove('btn-success', 'btn-primary');
+            btn.classList.add('btn-danger', 'opacity-75'); 
+            btn.innerHTML = '<i class="bi bi-x-circle me-2"></i> NO DISPONIBLE';
         }
     }
 
-    function agregarAlCarrito() {
+    async function agregarAlCarritoAPI() {
         if(!productoActual) return;
 
-        const stockDisponible = inventarioGlobal[productoActual.id] || 0;
-        let carrito = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
-        const itemExistente = carrito.find(i => i.id === productoActual.id);
-        const cantidadEnCarrito = itemExistente ? itemExistente.cantidad : 0;
-
-        if (stockDisponible <= cantidadEnCarrito) {
-             alert(`Stock insuficiente. Solo quedan ${stockDisponible} unidades en total.`);
-             return;
+        const stockTotal = inventarioGlobal[parseInt(prodId)] || 0; 
+        const enCarrito = carritoUsuario[parseInt(prodId)] || 0;
+        if (enCarrito + 1 > stockTotal) {
+            alert("NO DISPONIBLE: Has alcanzado el límite de stock.");
+            validarStock();
+            return;
         }
 
-        if (itemExistente) {
-            itemExistente.cantidad++;
-        } else {
-            carrito.push({
-                id: productoActual.id,
-                nombre: productoActual.nombre,
-                precio: parseFloat(productoActual.precio),
-                cantidad: 1
+        const btn = document.getElementById('btn-add-to-cart');
+        const originalHTML = btn.innerHTML;
+        const originalClass = btn.className;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> ...';
+
+        try {
+            const csrfToken = getCSRFToken();
+            const res = await fetch('/api/carrito/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ producto: productoActual.id, cantidad: 1 }),
+                credentials: 'include'
             });
+
+            if (res.ok) {
+                carritoUsuario[parseInt(prodId)] = (carritoUsuario[parseInt(prodId)] || 0) + 1;
+                
+                const badge = document.getElementById('contador-carrito');
+                let count = parseInt(badge.textContent || '0') + 1;
+                badge.textContent = count;
+                badge.classList.remove('d-none');
+
+                btn.className = 'btn btn-success btn-lg rounded-pill py-3 shadow-sm';
+                btn.innerHTML = '<i class="bi bi-check-lg me-2"></i> ¡Listo!';
+                
+                setTimeout(() => {
+                    validarStock();
+                }, 1000);
+            } else {
+                const err = await res.json();
+                alert('Error: ' + (err.detail || 'Fallo'));
+                btn.className = originalClass;
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        } catch (e) {
+            btn.className = originalClass;
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
         }
-
-        localStorage.setItem(CART_KEY, JSON.stringify(carrito));
-        actualizarContador();
-        
-        const btn = event.target.closest('button');
-        const original = btn.innerHTML;
-        btn.className = 'btn btn-success btn-lg rounded-pill py-3 shadow-sm';
-        btn.innerHTML = '<i class="bi bi-check-lg me-2"></i> ¡Agregado!';
-        
-        setTimeout(() => {
-            btn.innerHTML = original;
-            btn.className = 'btn btn-primary btn-lg rounded-pill py-3 shadow-sm';
-        }, 1500);
-    }
-
-    function actualizarContador() {
-        const carrito = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
-        const total = carrito.reduce((sum, item) => sum + item.cantidad, 0);
-        document.getElementById('contador-carrito').textContent = total;
     }
 </script>
 </body>

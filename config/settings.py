@@ -156,3 +156,4 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',  # 👈 PERMITIR ACCESO ANÓNIMO
     ),
 }
+
