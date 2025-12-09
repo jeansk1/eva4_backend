@@ -4,6 +4,8 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
+from django.contrib.auth.views import LoginView, LogoutView 
+from django.views.generic import TemplateView, RedirectView
 
 
 
@@ -11,10 +13,18 @@ urlpatterns = [
     # --- ADMINISTRACIÓN Y API ---
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
+
+    # 1. RUTA DASHBOARD
+    path('dashboard/', TemplateView.as_view(template_name='dashboard.html'), name='dashboard_view'),
     
-    # --- VISTAS PRINCIPALES ---
-    path('', TemplateView.as_view(template_name='dashboard.html'), name='dashboard'),
-    path('login/', TemplateView.as_view(template_name='login.html'), name='login'),
+    # 2. RUTA RAÍZ (Redirige al dashboard)
+    path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='home'),
+    
+    # 3. LOGIN (Usando LoginView nativo)
+    path('login/', LoginView.as_view(template_name='login.html', redirect_authenticated_user=False), name='login'),
+    
+    # 4. LOGOUT
+    path('logout/', LogoutView.as_view(next_page='/login/'), name='logout'),
 
     # --- MÓDULO PRODUCTOS ---
     path('productos/', TemplateView.as_view(template_name='productos/list.html'), name='productos_list'),

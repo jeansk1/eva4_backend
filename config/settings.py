@@ -101,15 +101,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'core.Usuario'
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',  # 👈 AÑADE ESTO
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
-}
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
@@ -156,4 +147,13 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',  # 👈 PERMITIR ACCESO ANÓNIMO
     ),
 }
+
+# URL exacta a donde ir tras iniciar sesión (coincide con el path 'dashboard/' de urls.py)
+LOGIN_REDIRECT_URL = '/dashboard/'
+
+# URL exacta a donde ir tras cerrar sesión
+LOGOUT_REDIRECT_URL = '/login/'
+
+# URL de login
+LOGIN_URL = '/login/'
 

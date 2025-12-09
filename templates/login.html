@@ -9,114 +9,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8f9fa;
-            height: 100vh;
-            overflow: hidden;
-        }
-        
-        .login-container {
-            height: 100vh;
-            display: flex;
-        }
-        
-        /* Left Side: Image/Brand */
-        .login-brand-side {
-            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-            color: white;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 4rem;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .brand-pattern {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-            background-size: 20px 20px;
-            opacity: 0.5;
-        }
-
-        /* Right Side: Form */
-        .login-form-side {
-            flex: 1;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            max-width: 600px;
-        }
-        
-        .login-card {
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .form-control {
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-            background-color: #f8f9fa;
-        }
-        
-        .form-control:focus {
-            background-color: white;
-            border-color: #0d6efd;
-            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1);
-        }
-
-        .btn-login {
-            padding: 0.75rem;
-            font-weight: 600;
-            border-radius: 8px;
-            background: #0d6efd;
-            border: none;
-            transition: all 0.2s;
-        }
-        
-        .btn-login:hover {
-            background: #0b5ed7;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
-        }
-
-        /* Token display */
-        .token-box {
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-size: 0.75rem;
-            background: #f8f9fa;
-            border: 1px dashed #6c757d;
-            border-radius: 6px;
-            padding: 0.5rem;
-            word-break: break-all;
-            max-height: 100px;
-            overflow-y: auto;
-        }
-
-        /* Mobile Adjustments */
-        @media (max-width: 768px) {
-            .login-brand-side { display: none; }
-            .login-form-side { 
-                max-width: 100%; 
-                background: #f8f9fa; 
-                padding: 1rem;
-            }
-            .login-card { 
-                background: white; 
-                padding: 2rem; 
-                border-radius: 16px; 
-                box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-            }
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; height: 100vh; overflow: hidden; }
+        .login-container { height: 100vh; display: flex; }
+        .login-brand-side { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); color: white; flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 4rem; position: relative; overflow: hidden; }
+        .brand-pattern { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px); background-size: 20px 20px; opacity: 0.5; }
+        .login-form-side { flex: 1; background: white; display: flex; align-items: center; justify-content: center; padding: 2rem; max-width: 600px; }
+        .login-card { width: 100%; max-width: 400px; }
+        .form-control { padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #dee2e6; background-color: #f8f9fa; }
+        .form-control:focus { background-color: white; border-color: #0d6efd; box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1); }
+        .btn-login { padding: 0.75rem; font-weight: 600; border-radius: 8px; background: #0d6efd; border: none; transition: all 0.2s; }
+        .btn-login:hover { background: #0b5ed7; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2); }
+        .token-box { font-family: monospace; font-size: 0.75rem; background: #f8f9fa; border: 1px dashed #6c757d; border-radius: 6px; padding: 0.5rem; word-break: break-all; max-height: 100px; overflow-y: auto; }
+        @media (max-width: 768px) { .login-brand-side { display: none; } .login-form-side { max-width: 100%; background: #f8f9fa; padding: 1rem; } .login-card { background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); } }
     </style>
 </head>
 <body>
@@ -125,34 +29,33 @@
         <div class="login-brand-side">
             <div class="brand-pattern"></div>
             <div style="z-index: 1;">
-                <div class="mb-4">
-                    <i class="bi bi-box-seam display-3"></i>
-                </div>
+                <div class="mb-4"><i class="bi bi-box-seam display-3"></i></div>
                 <h1 class="display-4 fw-bold mb-3">TemucoSoft</h1>
-                <p class="lead opacity-75">Gestión integral para tu negocio.<br>POS, Inventario y E-commerce en un solo lugar.</p>
+                <p class="lead opacity-75">Gestión integral para tu negocio.</p>
             </div>
-            <div class="mt-auto text-white-50 small">
-                © 2025 TemucoSoft S.A.
-            </div>
+            <div class="mt-auto text-white-50 small">© 2025 TemucoSoft S.A.</div>
         </div>
 
         <div class="login-form-side">
             <div class="login-card">
                 <div class="mb-5">
-                    <h3 class="fw-bold text-dark mb-1">Bienvenido de nuevo</h3>
-                    <p class="text-muted">Ingresa tus credenciales para acceder.</p>
+                    <h3 class="fw-bold text-dark mb-1">Bienvenido</h3>
+                    <p class="text-muted">Ingresa tus credenciales.</p>
                 </div>
 
-                <div id="error-alert" class="alert alert-danger d-none border-0 bg-danger-subtle text-danger mb-4 small"></div>
+                {% if form.errors %}
+                    <div class="alert alert-danger border-0 bg-danger-subtle text-danger mb-4 small">
+                        <i class="bi bi-exclamation-circle me-2"></i> Usuario o contraseña incorrectos.
+                    </div>
+                {% endif %}
 
-                <!-- FORMULARIO 1: LOGIN TRADICIONAL (SESIÓN) -->
-                <form id="loginForm" method="POST" action="{% url 'login' %}?next=/">
+                <form method="POST">
                     {% csrf_token %}
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-secondary">USUARIO</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-person"></i></span>
-                            <input type="text" class="form-control border-start-0 ps-0" id="username" name="username" required autofocus placeholder="Ej: admin">
+                            <input type="text" class="form-control border-start-0 ps-0" name="username" id="username" required autofocus placeholder="Ej: admin">
                         </div>
                     </div>
                     
@@ -160,7 +63,7 @@
                         <label class="form-label small fw-bold text-secondary">CONTRASEÑA</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-lock"></i></span>
-                            <input type="password" class="form-control border-start-0 ps-0" id="password" name="password" required placeholder="••••••••">
+                            <input type="password" class="form-control border-start-0 ps-0" name="password" id="password" required placeholder="••••••••">
                         </div>
                     </div>
 
@@ -169,7 +72,7 @@
                     </button>
                     
                     <div class="form-text text-center small mb-4">
-                        <i class="bi bi-info-circle me-1"></i> Usa sesión tradicional (cookies)
+                        <i class="bi bi-info-circle me-1"></i> Usa sesión tradicional
                     </div>
                 </form>
                 
@@ -179,12 +82,7 @@
                     <div class="flex-grow-1 border-top"></div>
                 </div>
                 
-                <!-- FORMULARIO 2: OBTENER JWT (REQUISITO DE EVALUACIÓN) -->
                 <div class="mb-4">
-                    <p class="small text-muted mb-3 text-center">
-                        <i class="bi bi-shield-check me-1"></i> <strong>Para APIs y desarrollo</strong>
-                    </p>
-                    
                     <div id="jwt-error" class="alert alert-warning d-none border-0 bg-warning-subtle text-warning mb-3 small"></div>
                     
                     <button type="button" class="btn btn-outline-info w-100 mb-3" onclick="obtenerJWT()" id="btn-jwt">
@@ -194,35 +92,22 @@
                     <div class="card border-info bg-info-subtle mb-3 d-none" id="jwt-result">
                         <div class="card-header bg-info text-white py-2">
                             <div class="d-flex justify-content-between align-items-center">
-                                <small><i class="bi bi-check-circle me-1"></i> Token JWT Obtenido</small>
-                                <button class="btn btn-sm btn-light py-0 px-2" onclick="copiarToken()">
-                                    <i class="bi bi-copy"></i> Copiar
-                                </button>
+                                <small><i class="bi bi-check-circle me-1"></i> Token Generado</small>
+                                <button class="btn btn-sm btn-light py-0 px-2" onclick="copiarToken()">Copiar</button>
                             </div>
                         </div>
                         <div class="card-body p-3">
                             <div class="token-box mb-2" id="token-display"></div>
                             <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted">
-                                    <i class="bi bi-check-circle-fill text-success me-1"></i>
-                                    Almacenado en localStorage
-                                </small>
-                                <a href="/" class="btn btn-sm btn-success py-1 px-3">
-                                    <i class="bi bi-arrow-right"></i> Ir al sistema
-                                </a>
+                                <small class="text-muted"><i class="bi bi-check-circle-fill text-success me-1"></i> Guardado</small>
+                                <a href="/dashboard/" class="btn btn-sm btn-success py-1 px-3">Ir al Dashboard</a>
                             </div>
                         </div>
                     </div>
-                    
-                    <p class="small text-muted text-center">
-                        Este token se usará para autenticar todas las peticiones a la API REST.
-                    </p>
                 </div>
                 
-                <!-- TIENDA PÚBLICA -->
                 <div class="text-center pt-3 border-top">
-                    <p class="small text-muted mb-2">¿Eres cliente final?</p>
-                    <a href="/tienda/" class="btn btn-outline-secondary btn-sm rounded-pill px-4">
+                    <a href="/tienda/" class="text-decoration-none small text-secondary">
                         <i class="bi bi-shop me-1"></i> Ir a Tienda Pública
                     </a>
                 </div>
@@ -231,170 +116,73 @@
     </div>
 
 <script>
-    // Limpiar localStorage al cargar la página de login
-    localStorage.clear();
-    sessionStorage.clear();
+    // --- JAVASCRIPT SOLO PARA EL TOKEN JWT ---
+    // El "Iniciar Sesión" de arriba es manejado por Django directamente.
 
-    // --- FUNCIÓN 1: LOGIN TRADICIONAL (SESIÓN) ---
-    document.getElementById('loginForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        const alertBox = document.getElementById('error-alert');
-        const btn = this.querySelector('button[type="submit"]');
-        
-        // Efecto de carga
-        btn.disabled = true;
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Iniciando sesión...';
-        alertBox.classList.add('d-none');
-
-        try {
-            const formData = new FormData(this);
-            
-            const response = await fetch(this.action, {
-                method: 'POST',
-                body: formData,
-                credentials: 'same-origin'
-            });
-
-            if (response.ok) {
-                // Login exitoso con sesión
-                btn.classList.remove('btn-primary');
-                btn.classList.add('btn-success');
-                btn.innerHTML = '<i class="bi bi-check-lg me-2"></i> ¡Sesión iniciada!';
-                
-                // Redirigir después de breve delay
-                setTimeout(() => {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const next = urlParams.get('next') || '/';
-                    window.location.href = next;
-                }, 800);
-            } else {
-                const errorText = await response.text();
-                alertBox.innerHTML = `<i class="bi bi-exclamation-circle me-2"></i> Error al iniciar sesión`;
-                alertBox.classList.remove('d-none');
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
-        } catch (error) {
-            console.error(error);
-            alertBox.innerHTML = '<i class="bi bi-wifi-off me-2"></i> Error de conexión con el servidor';
-            alertBox.classList.remove('d-none');
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }
-    });
-
-    // --- FUNCIÓN 2: OBTENER JWT (REQUISITO DE EVALUACIÓN) ---
     async function obtenerJWT() {
+        // Leemos los valores de los inputs por su ID
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
+        
         const errorBox = document.getElementById('jwt-error');
         const jwtBtn = document.getElementById('btn-jwt');
         
         if (!username || !password) {
-            errorBox.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i> Ingresa usuario y contraseña primero';
+            errorBox.textContent = 'Por favor, escribe usuario y contraseña arriba.';
             errorBox.classList.remove('d-none');
             return;
         }
         
         errorBox.classList.add('d-none');
-        
-        // Efecto de carga
         const originalText = jwtBtn.innerHTML;
         jwtBtn.disabled = true;
-        jwtBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generando token JWT...';
+        jwtBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generando...';
         
         try {
             const response = await fetch('/api/auth/login/', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    username: username, 
-                    password: password 
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
             });
             
             const data = await response.json();
             
             if (response.ok) {
-                // 1. Mostrar token (solo primeros caracteres por seguridad)
-                const tokenPreview = data.access.substring(0, 60) + '...';
-                document.getElementById('token-display').textContent = tokenPreview;
+                // Mostrar token visualmente
+                document.getElementById('token-display').textContent = data.access.substring(0, 50) + '...';
                 document.getElementById('jwt-result').classList.remove('d-none');
                 
-                // 2. Guardar en localStorage (REQUISITO EXPLÍCITO DE LA EVALUACIÓN)
+                // Guardar en LocalStorage para usos futuros de API
                 localStorage.setItem('access_token', data.access);
                 localStorage.setItem('refresh_token', data.refresh);
-                
-                // 3. Guardar información del usuario incluyendo el PLAN
                 localStorage.setItem('user_info', JSON.stringify({
-                    username: data.username || username,
-                    email: data.email || '',
-                    rol: data.rol || 'vendedor',
-                    plan: data.plan || 'basico',  // ← CRÍTICO: El plan viene aquí
-                    compania: data.compania_nombre || '',
-                    compania_id: data.compania_id || null
+                    username: data.username,
+                    rol: data.rol,
+                    plan: data.plan,
+                    compania: data.compania_nombre
                 }));
                 
-                // 4. Mensaje de éxito
-                jwtBtn.classList.remove('btn-outline-info');
-                jwtBtn.classList.add('btn-success');
-                jwtBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i> ¡Token obtenido!';
-                
-                console.log('Token JWT almacenado en localStorage. Plan detectado:', data.plan || 'basico');
-                
+                jwtBtn.className = 'btn btn-success w-100 mb-3';
+                jwtBtn.innerHTML = '<i class="bi bi-check-lg"></i> Token Listo';
             } else {
-                errorBox.innerHTML = `<i class="bi bi-x-circle me-2"></i> Error: ${data.detail || 'Credenciales incorrectas'}`;
+                errorBox.textContent = 'Error: ' + (data.detail || 'Credenciales inválidas');
                 errorBox.classList.remove('d-none');
                 jwtBtn.disabled = false;
                 jwtBtn.innerHTML = originalText;
             }
         } catch (error) {
-            console.error('Error al obtener JWT:', error);
-            errorBox.innerHTML = '<i class="bi bi-wifi-off me-2"></i> Error de conexión con la API';
+            console.error(error);
+            errorBox.textContent = 'Error de conexión con la API';
             errorBox.classList.remove('d-none');
             jwtBtn.disabled = false;
             jwtBtn.innerHTML = originalText;
         }
     }
 
-    // Función para copiar token al portapapeles
     function copiarToken() {
         const token = localStorage.getItem('access_token');
-        if (token) {
-            navigator.clipboard.writeText(token).then(() => {
-                const btn = event.target.closest('button');
-                const original = btn.innerHTML;
-                btn.innerHTML = '<i class="bi bi-check"></i>';
-                setTimeout(() => { 
-                    btn.innerHTML = original; 
-                }, 1500);
-            }).catch(err => {
-                console.error('Error al copiar:', err);
-            });
-        }
+        if (token) navigator.clipboard.writeText(token);
     }
-
-    // Permitir Enter en los campos para ambos métodos
-    document.getElementById('username').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            document.getElementById('password').focus();
-        }
-    });
-    
-    document.getElementById('password').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            document.getElementById('loginForm').querySelector('button[type="submit"]').click();
-        }
-    });
 </script>
 </body>
 </html>
