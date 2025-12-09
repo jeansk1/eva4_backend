@@ -1,9 +1,8 @@
-# core/models.py
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-# Importamos los validadores desde el archivo externo para no ensuciar el modelo
+# Importamos los validadores desde el archivo externo
 from .validators import validar_rut_chileno, validar_rut, validar_fecha_no_futura, validar_numero_positivo
 
 class Usuario(AbstractUser):
@@ -23,6 +22,10 @@ class Usuario(AbstractUser):
     )
     rol = models.CharField(max_length=20, choices=ROL_CHOICES, default='vendedor')
     compania = models.ForeignKey('Compania', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # 🔥 CAMPO AGREGADO: Sucursal asignada (para vendedores/gerentes)
+    sucursal = models.ForeignKey('Sucursal', on_delete=models.SET_NULL, null=True, blank=True, related_name='empleados')
+    
     telefono = models.CharField(max_length=15, blank=True)
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
@@ -70,7 +73,7 @@ class Suscripcion(models.Model):
         ('premium', 'Premium'),
     ]
     
-    compania = models.OneToOneField(Compania, on_delete=models.CASCADE)
+    compania = models.OneToOneField(Compania, on_delete=models.CASCADE, related_name='suscripcion')
     plan = models.CharField(max_length=20, choices=PLAN_CHOICES)
     fecha_inicio = models.DateField()
     fecha_termino = models.DateField()
@@ -81,7 +84,6 @@ class Suscripcion(models.Model):
         if self.fecha_termino <= self.fecha_inicio:
             raise ValidationError('La fecha de término debe ser posterior a la de inicio')
     
-    # 🔥 AGREGA ESTE MÉTODO SAVE() 🔥
     def save(self, *args, **kwargs):
         # Asignar límites automáticos según el plan
         if self.plan == 'basico':
@@ -89,9 +91,7 @@ class Suscripcion(models.Model):
         elif self.plan == 'estandar':
             self.max_sucursales = 3
         elif self.plan == 'premium':
-            self.max_sucursales = 9999  # Prácticamente ilimitado
-        
-        # Llamar al save original
+            self.max_sucursales = 9999
         super().save(*args, **kwargs)
     
     def __str__(self):
@@ -102,7 +102,9 @@ class Suscripcion(models.Model):
         verbose_name_plural = 'Suscripciones'
 
 class Sucursal(models.Model):
-    compania = models.ForeignKey(Compania, on_delete=models.CASCADE)
+    # 🔥 CORRECCIÓN CLAVE: Agregamos related_name='sucursales' para evitar el error E303
+    compania = models.ForeignKey(Compania, on_delete=models.CASCADE, related_name='sucursales')
+    
     nombre = models.CharField(max_length=100)
     direccion = models.TextField()
     telefono = models.CharField(max_length=15)
@@ -144,7 +146,7 @@ class Producto(models.Model):
     ]
     
     compania = models.ForeignKey(Compania, on_delete=models.CASCADE)
-    sku = models.CharField(max_length=50, unique=True)
+    sku = models.CharField(max_length=50) # Quitamos unique=True global para permitir mismo SKU en distintas compañias si se desea, o mantenlo si es global
     nombre = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True)
     precio = models.DecimalField(max_digits=10, decimal_places=2)
@@ -166,6 +168,8 @@ class Producto(models.Model):
     class Meta:
         verbose_name = 'Producto'
         verbose_name_plural = 'Productos'
+        # Opcional: Unique SKU por compañia
+        # unique_together = ('compania', 'sku')
 
 class Inventario(models.Model):
     sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE)
@@ -243,8 +247,6 @@ class Venta(models.Model):
             raise ValidationError('El vendedor debe tener rol "vendedor"')
     
     def save(self, *args, **kwargs):
-        # Calcular total automáticamente si hay items (útil para admin panel)
-        # Nota: La API maneja esto explícitamente en el serializer.
         if not self.total and self.pk and hasattr(self, 'items'):
              self.total = sum(item.subtotal for item in self.items.all())
         super().save(*args, **kwargs)
@@ -313,7 +315,7 @@ class ItemOrden(models.Model):
 
 class ItemCarrito(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, null=True, blank=True)
-    clave_sesion = models.CharField(max_length=100, null=True, blank=True)  # Para usuarios anónimos
+    clave_sesion = models.CharField(max_length=100, null=True, blank=True)
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
     cantidad = models.IntegerField(default=1)
     agregado_en = models.DateTimeField(auto_now_add=True)

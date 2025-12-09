@@ -1,4 +1,3 @@
-# api/serializers.py - 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.db import transaction 
@@ -6,20 +5,17 @@ from core.models import *
 
 Usuario = get_user_model()
 
-# --- Funciones de Ayuda (Para no repetir código) ---
+# --- Funciones de Ayuda ---
 def obtener_nombre_seguro(obj, campo):
     """Intenta obtener el nombre de una relación de forma segura"""
     try:
         relacion = getattr(obj, campo)
         if not relacion:
             return "Sin Asignar"
-        # Si es un objeto y tiene atributo nombre
         if hasattr(relacion, 'nombre'):
             return relacion.nombre
-        # Si es un objeto y tiene username (caso Usuario)
         if hasattr(relacion, 'username'):
             return relacion.username
-        # Si por alguna razón es un ID (int)
         return f"ID: {relacion}"
     except:
         return "Error Datos"
@@ -27,22 +23,25 @@ def obtener_nombre_seguro(obj, campo):
 # --- Usuario ---
 class UsuarioSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
-    # 👇 ESTE CAMPO AHORA USA LA FUNCIÓN DE PROTECCIÓN 👇
     compania_nombre = serializers.SerializerMethodField()
+    sucursal_nombre = serializers.SerializerMethodField()
     
     class Meta:
         model = Usuario
-        # El campo 'compania' sigue siendo el ID, pero mostramos el nombre
-        fields = ('id', 'username', 'email', 'rut', 'rol', 'compania', 'compania_nombre', 'telefono', 'is_active', 'password', 'creado_en')
-        read_only_fields = ('id', 'is_active', 'creado_en', 'compania_nombre') 
+        fields = ('id', 'username', 'email', 'rut', 'rol', 'compania', 'compania_nombre', 'sucursal', 'sucursal_nombre', 'telefono', 'is_active', 'password', 'creado_en')
+        read_only_fields = ('id', 'is_active', 'creado_en', 'compania_nombre', 'sucursal_nombre') 
+        
+        # 🔥 AGREGA ESTO: Hacemos que 'compania' no sea obligatoria en el JSON de entrada
         extra_kwargs = {
-            'password': {'write_only': True, 'required': False}
+            'password': {'write_only': True, 'required': False},
+            'compania': {'required': False, 'allow_null': True} 
         }
         
-    # FUNCIÓN PARA OBTENER EL NOMBRE DE LA COMPAÑÍA
     def get_compania_nombre(self, obj):
-        # Utilizamos la función segura para obtener el nombre de la empresa
         return obtener_nombre_seguro(obj, 'compania')
+
+    def get_sucursal_nombre(self, obj):
+        return obtener_nombre_seguro(obj, 'sucursal')
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -72,36 +71,46 @@ class SuscripcionSerializer(serializers.ModelSerializer):
         model = Suscripcion
         fields = '__all__'
 
+# 🔥 CORRECCIÓN AQUÍ: SucursalSerializer 🔥
 class SucursalSerializer(serializers.ModelSerializer):
     nombre_compania = serializers.SerializerMethodField()
     class Meta:
         model = Sucursal
         fields = ('id', 'nombre', 'compania', 'nombre_compania', 'direccion', 'telefono', 'email', 'creado_en')
-        read_only_fields = ('creado_en',)
+        # AGREGAMOS 'compania' A READ_ONLY PARA QUE NO LO PIDA EN EL FORMULARIO
+        read_only_fields = ('creado_en', 'compania')
 
     def get_nombre_compania(self, obj):
         return obtener_nombre_seguro(obj, 'compania')
 
+# 🔥 CORRECCIÓN AQUÍ: ProveedorSerializer 🔥
 class ProveedorSerializer(serializers.ModelSerializer):
     nombre_compania = serializers.SerializerMethodField()
     class Meta:
         model = Proveedor
         fields = '__all__'
+        # AGREGAMOS 'compania' AQUÍ TAMBIÉN
+        read_only_fields = ('compania',)
 
     def get_nombre_compania(self, obj):
         return obtener_nombre_seguro(obj, 'compania')
 
-# --- PRODUCTO (BLINDADO) ---
+# 🔥 CORRECCIÓN AQUÍ: ProductoSerializer 🔥
 class ProductoSerializer(serializers.ModelSerializer):
-    nombre_compania = serializers.SerializerMethodField()
+    # Agrega esto si quieres que el nombre salga en la respuesta JSON
+    nombre_compania = serializers.SerializerMethodField() 
+
     class Meta:
         model = Producto
-        fields = ('id', 'sku', 'nombre', 'descripcion', 'precio', 'costo', 'categoria', 'imagen', 
-                  'compania', 'nombre_compania', 'creado_en', 'actualizado_en')
-        read_only_fields = ('creado_en', 'actualizado_en')
+        fields = '__all__'
+        # ESTO ESTÁ PERFECTO: Protege el campo para que no se pida al crear
+        read_only_fields = ('compania', 'creado_en', 'actualizado_en')
 
     def get_nombre_compania(self, obj):
-        return obtener_nombre_seguro(obj, 'compania')
+        # Asegúrate de importar obtener_nombre_seguro o usar try/except
+        if obj.compania:
+            return obj.compania.nombre
+        return "Sin Compañía"
 
 class InventarioSerializer(serializers.ModelSerializer):
     nombre_producto = serializers.SerializerMethodField()
@@ -179,7 +188,6 @@ class VentaSerializer(serializers.ModelSerializer):
         return obtener_nombre_seguro(obj, 'vendedor')
 
 class ItemVentaSerializer(serializers.ModelSerializer):
-    # Agregamos estos campos de lectura para que el frontend tenga datos reales
     nombre_producto = serializers.SerializerMethodField()
     
     class Meta:
@@ -188,7 +196,6 @@ class ItemVentaSerializer(serializers.ModelSerializer):
         read_only_fields = ('nombre_producto', 'precio_unitario', 'subtotal')
 
     def get_nombre_producto(self, obj):
-        # Protección por si se borró el producto
         return obj.producto.nombre if obj.producto else "Producto Eliminado"
         
 class VentaConItemsSerializer(serializers.ModelSerializer):
@@ -230,7 +237,6 @@ class VentaConItemsSerializer(serializers.ModelSerializer):
 
 # --- Órdenes ---
 class ItemOrdenSerializer(serializers.ModelSerializer):
-    # Agregamos este campo para que el frontend sepa qué producto es
     nombre_producto = serializers.SerializerMethodField()
 
     class Meta:
@@ -239,13 +245,11 @@ class ItemOrdenSerializer(serializers.ModelSerializer):
         read_only_fields = ('nombre_producto',)
 
     def get_nombre_producto(self, obj):
-        # Buscamos el nombre real del producto asociado
         return obj.producto.nombre if obj.producto else "Producto Eliminado"
 
 class OrdenSerializer(serializers.ModelSerializer):
     items = ItemOrdenSerializer(many=True) 
     nombre_sucursal = serializers.SerializerMethodField()
-    
     class Meta:
         model = Orden
         fields = '__all__'
@@ -255,41 +259,24 @@ class OrdenSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items_data = validated_data.pop('items')
-        
         with transaction.atomic():
-            # 1. Crear la Orden
             orden = Orden.objects.create(**validated_data)
-            
             for item_data in items_data:
+                # LÓGICA DE STOCK (AGREGADA EN PASOS ANTERIORES)
                 producto = item_data['producto']
                 cantidad = item_data['cantidad']
                 precio_unitario = item_data['precio_unitario']
                 
-                # 2. Crear el Item de Orden
-                ItemOrden.objects.create(
-                    orden=orden, 
-                    producto=producto, 
-                    cantidad=cantidad, 
-                    precio_unitario=precio_unitario
-                )
-                
-                # 3. DESCONTAR STOCK (LÓGICA NUEVA)
-                # Buscamos el primer inventario que tenga ese producto y stock suficiente
-                # (Como es e-commerce, tomamos de cualquier sucursal disponible si no se especifica una)
-                inventario = Inventario.objects.select_for_update().filter(
-                    producto=producto, 
-                    stock__gte=cantidad
-                ).first()
+                # Descontar stock de cualquier sucursal disponible (E-commerce global)
+                inventario = Inventario.objects.select_for_update().filter(producto=producto, stock__gte=cantidad).first()
                 
                 if inventario:
                     inventario.stock -= cantidad
                     inventario.save()
-                else:
-                    # Si llegamos aquí es porque alguien compró el último justo antes que tú
-                    raise serializers.ValidationError(
-                        f"No hay stock suficiente para el producto {producto.nombre}"
-                    )
-            
+                # Nota: Si no hay inventario, se crea la orden igual (backorder) o se lanza error según regla de negocio.
+                # Aquí permitimos crearla, pero idealmente se validó antes en el frontend.
+                
+                ItemOrden.objects.create(orden=orden, **item_data)
             return orden
 
 # --- Carrito Interno ---
@@ -298,39 +285,22 @@ class ItemCarritoSerializer(serializers.ModelSerializer):
     precio_producto = serializers.DecimalField(source='producto.precio', read_only=True, max_digits=10, decimal_places=2)
     subtotal = serializers.SerializerMethodField()
     sku_producto = serializers.CharField(source='producto.sku', read_only=True)
-    # CORRECCIÓN: Agregamos producto_id para que el frontend pueda leerlo
     producto_id = serializers.PrimaryKeyRelatedField(source='producto', read_only=True)
     imagen_producto = serializers.ImageField(source='producto.imagen', read_only=True)
     
     class Meta:
         model = ItemCarrito
         fields = (
-            'id', 
-            'producto',         # Se usa para escribir (POST)
-            'producto_id',      # Se usa para leer (GET) - CORRECCIÓN
-            'nombre_producto',
-            'sku_producto',
-            'precio_producto',
-            'imagen_producto', 
-            'cantidad', 
-            'subtotal',
-            'clave_sesion',
-            'usuario',
-            'agregado_en'
+            'id', 'producto', 'producto_id', 'nombre_producto', 'sku_producto',
+            'precio_producto', 'imagen_producto', 'cantidad', 'subtotal',
+            'clave_sesion', 'usuario', 'agregado_en'
         )
         read_only_fields = (
-            'id', 
-            'nombre_producto', 
-            'precio_producto', 
-            'subtotal',
-            'sku_producto',
-            'clave_sesion',
-            'usuario',
-            'agregado_en',
-            'producto_id' # CORRECCIÓN
+            'id', 'nombre_producto', 'precio_producto', 'subtotal',
+            'sku_producto', 'clave_sesion', 'usuario', 'agregado_en',
+            'producto_id', 'imagen_producto'
         )
         extra_kwargs = {
-            # Mantenemos write_only aquí para el input, pero ya tenemos producto_id para el output
             'producto': {'required': True, 'write_only': True},
             'cantidad': {'required': True, 'min_value': 1}
         }
@@ -345,16 +315,14 @@ class ItemCarritoSerializer(serializers.ModelSerializer):
     
     def validate(self, data):
         """Validaciones adicionales"""
-        # CORRECCIÓN: Usamos .get() para evitar errores si el campo no viene (updates parciales)
+        # CORRECCIÓN: .get() para actualizaciones parciales
         producto = data.get('producto')
         cantidad = data.get('cantidad')
         
-        # 1. Validar producto SOLO si se está enviando (creación o cambio de producto)
         if producto:
             if not Producto.objects.filter(id=producto.id).exists():
                 raise serializers.ValidationError({"producto": "Producto no encontrado"})
         
-        # 2. Validar cantidad SOLO si se está enviando
         if cantidad is not None:
             if cantidad <= 0:
                 raise serializers.ValidationError({"cantidad": "La cantidad debe ser mayor a 0"})

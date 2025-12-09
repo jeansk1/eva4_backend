@@ -26,27 +26,35 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
     
-    # PERMISOS DINÁMICOS:
-    # - Para crear usuarios: Solo Admins
-    # - Para listar usuarios: Solo Admins
-    # - Para ver/editar: El propio usuario O un Admin
     def get_permissions(self):
         if self.action in ['create', 'list', 'destroy']:
-            return [IsAuthenticated(), EsAdminOGerente()] # O EsSuperAdmin si prefieres
-        
-        # Para retrieve (ver detalle) o update/partial_update (editar perfil/pass)
-        # Permitimos si es el dueño de la cuenta
+            return [IsAuthenticated(), EsAdminOGerente()]
         return [IsAuthenticated()] 
 
     def get_queryset(self):
         usuario = self.request.user
         if usuario.rol == 'super_admin':
             return Usuario.objects.all()
-        # Admin Cliente ve a los de su empresa
         if usuario.rol == 'admin_cliente':
             return Usuario.objects.filter(compania=usuario.compania)
-        # Usuario normal solo se ve a sí mismo (para evitar que un vendedor vea a otros por ID)
         return Usuario.objects.filter(id=usuario.id)
+
+    # 🔥 MÉTODO ACTUALIZADO PARA ACEPTAR COMPAÑÍA DE SUPER ADMIN 🔥
+    def perform_create(self, serializer):
+        usuario_creador = self.request.user
+        
+        # 1. Si es Super Admin, permitimos que elija la compañía (si viene en el serializer)
+        if usuario_creador.rol == 'super_admin':
+            # El serializer ya trae los datos del formulario (incluida la 'compania' si se seleccionó)
+            serializer.save()
+            
+        # 2. Si es Admin Cliente o Gerente, FORZAMOS su propia compañía
+        elif usuario_creador.compania:
+            serializer.save(compania=usuario_creador.compania)
+            
+        # 3. Caso de borde (no debería pasar si la lógica está bien)
+        else:
+            serializer.save()
 
 class UsuarioActualView(APIView):
     # Esto permite que CUALQUIER usuario logueado (vendedor, gerente) vea su perfil
@@ -96,12 +104,19 @@ class SucursalViewSet(viewsets.ModelViewSet):
     serializer_class = SucursalSerializer
     
     def get_queryset(self):
-        usuario = self.request.user
-        if usuario.rol == 'super_admin':
-            return Sucursal.objects.all()
-        # Filtra solo sucursales de la compañía del usuario
-        return Sucursal.objects.filter(compania=usuario.compania)
-
+        user = self.request.user
+        
+        # Si el usuario no está logueado o no tiene compañía, no mostramos nada
+        if user.is_anonymous or not user.compania:
+            # NOTA: Un Super Admin (rol 'super_admin') no tiene compañía, 
+            # si quieres que vea TODAS las sucursales, puedes añadir:
+            # if user.rol == 'super_admin':
+            #    return Sucursal.objects.all()
+            return Sucursal.objects.none()
+            
+        # 🔥 FILTRO CLAVE: Solo devuelve las sucursales que pertenecen a la compañía del usuario
+        return Sucursal.objects.filter(compania=user.compania).order_by('nombre')
+    
     def get_permissions(self):
         # ✅ MODIFICACIÓN: Agregar PermisoLimiteSucursales para creación
         if self.action == 'create':
@@ -141,65 +156,117 @@ class SucursalViewSet(viewsets.ModelViewSet):
         # 4. Asignar y guardar si la validación pasa
         serializer.save(compania=compania)
 
+
+
 # --- Vistas de Producto e Inventario ---
 class ProductoViewSet(viewsets.ModelViewSet):
     queryset = Producto.objects.all()
     serializer_class = ProductoSerializer
-    
-    # Por defecto protegemos todo, pero get_permissions hace la excepción
+    # Permitimos ver a cualquiera autenticado, pero editamos quién ve qué abajo
     permission_classes = [IsAuthenticated, EsAdminOGerente]
     
     def get_queryset(self):
         usuario = self.request.user
+        queryset = Producto.objects.all()
         
-        # 1. Si es usuario anónimo (tienda pública), mostramos todo
-        if not usuario.is_authenticated:
-            return Producto.objects.all()
-
-        # 2. Si es Super Admin, ve todo.
+        # 1. Super Admin: Ve todo el catálogo global
         if usuario.rol == 'super_admin':
-            return Producto.objects.all()
-        
-        # 3. FILTRO CORREGIDO (Clave): Vendedores y otros roles ven productos de SU compañía,
-        #    PERO solo si la tienen asignada.
+            return queryset
+
+        # 2. 🔥 EL FILTRO "TIENDA NUEVA" (Para Dueños y Vendedores con Sucursal)
+        # Si el usuario tiene una sucursal asignada (sea dueño o vendedor)...
+        if usuario.sucursal:
+            # ... SOLO le mostramos los productos que YA existen en SU inventario.
+            # Como la sucursal es nueva y no tiene inventario, esto devolverá VACÍO [].
+            return queryset.filter(inventario__sucursal=usuario.sucursal).distinct()
+
+        # 3. Dueños Globales (Sin sucursal asignada):
+        # Ven todo el catálogo de la compañía (para poder gestionar precios globales, etc.)
         if usuario.compania:
-            return Producto.objects.filter(compania=usuario.compania)
-        
-        # 4. Si es empleado pero NO tiene compañía asignada, devuelve una lista vacía.
+            return queryset.filter(compania=usuario.compania)
+            
         return Producto.objects.none()
     
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            # Permitimos que Vendedores y público VEAN los productos
-            return [AllowAny()] 
-        return [IsAuthenticated(), EsAdminOGerente()] # Para editar/crear/borrar
+    # 🔥 IMPORTANTE: AL CREAR UN PRODUCTO, LO ASIGNAMOS A LA SUCURSAL AUTOMÁTICAMENTE
+    def perform_create(self, serializer):
+        # 1. Obtenemos el ID del usuario que viene en el token
+        user_id_del_token = self.request.user.id
+        
+        print(f"\n⚡ INTENTO DE CREACIÓN - ID TOKEN: {user_id_del_token}")
+
+        # 2. TRUCO DE MAGIA: Forzamos una búsqueda fresca en la Base de Datos
+        # Esto se salta cualquier caché o token viejo. Vamos directo al disco duro.
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        # Traemos al usuario "fresco"
+        usuario_fresco = User.objects.get(id=user_id_del_token)
+        
+        print(f"⚡ USUARIO FRESCO: {usuario_fresco.username}")
+        print(f"⚡ COMPAÑÍA REAL EN BD: {usuario_fresco.compania} (ID: {usuario_fresco.compania_id})")
+
+        # 3. Validamos usando el usuario fresco
+        if not usuario_fresco.compania_id:
+            # Si entra aquí, es imposible que en el Shell salga otra cosa.
+            # Significa que estás conectado a bases de datos distintas.
+            raise serializers.ValidationError(
+                {"error": f"IMPOSIBLE: La base de datos dice que el usuario {usuario_fresco.username} NO tiene compañía."}
+            )
+
+        # 4. Guardamos usando el usuario fresco
+        producto = serializer.save(compania_id=usuario_fresco.compania_id)
+        
+        # 5. Inventario usando el usuario fresco
+        if usuario_fresco.sucursal:
+            print(f"⚡ SUCURSAL DETECTADA: {usuario_fresco.sucursal.nombre}")
+            Inventario.objects.create(
+                sucursal=usuario_fresco.sucursal,
+                producto=producto,
+                stock=0, 
+                punto_reorden=10
+            )
+        else:
+            print("⚡ AVISO: El usuario tiene compañía pero NO tiene sucursal. Producto creado pero no inventariado.")
 
 class InventarioViewSet(viewsets.ModelViewSet):
     queryset = Inventario.objects.all()
     serializer_class = InventarioSerializer
-    # Quitamos la clase estricta y delegamos a get_permissions
     permission_classes = [IsAuthenticated, EsAdminOGerente] 
     
     def get_queryset(self):
         usuario = self.request.user
         queryset = Inventario.objects.all()
-        
-        if usuario.is_authenticated and usuario.rol != 'super_admin':
-            queryset = queryset.filter(sucursal__compania=usuario.compania)
-        
-        sucursal_id = self.request.query_params.get('sucursal', None)
-        if sucursal_id:
-            queryset = queryset.filter(sucursal_id=sucursal_id)
-        
-        return queryset
 
-    def get_permissions(self):
-        # Permitimos que CUALQUIER usuario logueado VEA los datos de inventario.
-        if self.action in ['list', 'retrieve']:
-            return [AllowAny()] 
+        # ---------------------------------------------------------------
+        # 1. NIVEL DIOS: Super Admin ve todo siempre
+        # ---------------------------------------------------------------
+        if usuario.rol == 'super_admin':
+            return Inventario.objects.all()
+
+        # ---------------------------------------------------------------
+        # 2. FILTRO DE HIERRO (La solución a tu problema) 🔒
+        # ---------------------------------------------------------------
+        # No importa si eres Dueño, Gerente o Vendedor. 
+        # Si en tu perfil de usuario tienes asignada una 'sucursal', 
+        # NO DEBES ver nada más que esa sucursal.
+        if usuario.sucursal:
+            return queryset.filter(sucursal=usuario.sucursal)
+
+        # ---------------------------------------------------------------
+        # 3. DUEÑOS GENERALES (Sin sucursal asignada)
+        # ---------------------------------------------------------------
+        # Si llegamos aquí, es porque usuario.sucursal es NULL (es un dueño global).
+        # Primero filtramos por la compañía para no ver cosas de otros clientes.
+        queryset = queryset.filter(sucursal__compania=usuario.compania)
         
-        # Para modificar el stock (create, update, destroy), solo Administradores o Gerentes.
-        return [IsAuthenticated(), EsAdminOGerente()]
+        # Luego miramos si eligió alguna sucursal en el menú (?sucursal=X)
+        sucursal_id_param = self.request.query_params.get('sucursal', None)
+
+        if sucursal_id_param:
+            return queryset.filter(sucursal_id=sucursal_id_param)
+        
+        # Si es dueño global y no elige sucursal, devolvemos vacío por seguridad
+        return Inventario.objects.none()
 
 class ProveedorViewSet(viewsets.ModelViewSet):
     queryset = Proveedor.objects.all()
@@ -227,6 +294,7 @@ class CompraViewSet(viewsets.ModelViewSet):
 # --- Vistas de Ventas y Órdenes ---
 class VentaViewSet(viewsets.ModelViewSet):
     queryset = Venta.objects.all()
+    # Asegúrate de importar IsAuthenticated y EsAdminOVendedor
     permission_classes = [IsAuthenticated, EsAdminOVendedor]
     
     def get_serializer_class(self):
@@ -237,30 +305,79 @@ class VentaViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         usuario = self.request.user
+        
+        # Optimizamos la consulta trayendo datos relacionados de una vez
         queryset = Venta.objects.select_related('sucursal', 'vendedor').all()
         
+        # 🔒 LÓGICA DE SEGURIDAD (CANDADO DE ROL)
+        
+        # 1. Caso Vendedor: Solo ve ventas SUYAS hechas en SU sucursal actual.
         if usuario.rol == 'vendedor':
-            queryset = queryset.filter(vendedor=usuario)
+            # Si el usuario tiene sucursal asignada, filtramos por ella
+            if usuario.sucursal:
+                queryset = queryset.filter(sucursal=usuario.sucursal)
+            
+            # Opcional: ¿El vendedor solo ve sus propias ventas o las de todos en su tienda?
+            # Si solo debe ver las suyas, descomenta la siguiente línea:
+            # queryset = queryset.filter(vendedor=usuario)
+            
+            # Si no tiene sucursal asignada (error de configuración), no debería ver nada
+            if not usuario.sucursal:
+                return Venta.objects.none()
+
+        # 2. Caso Admin/Gerente: Ven todo lo de la compañía
         elif usuario.rol in ['admin_cliente', 'gerente']:
             queryset = queryset.filter(sucursal__compania=usuario.compania)
         
-        # Filtros para reportes
+        # 3. Caso Super Admin: Ve todo (sin filtro adicional)
+        
+        # 📊 FILTROS PARA REPORTES Y UI
         sucursal_id = self.request.query_params.get('sucursal', None)
         fecha_desde = self.request.query_params.get('fecha_desde', None)
         fecha_hasta = self.request.query_params.get('fecha_hasta', None)
         
         if sucursal_id:
+            # Validamos que el vendedor no intente filtrar una sucursal ajena
+            if usuario.rol == 'vendedor' and str(usuario.sucursal.id) != str(sucursal_id):
+                # Si intenta ver otra, devolvemos vacío por seguridad
+                return Venta.objects.none()
             queryset = queryset.filter(sucursal_id=sucursal_id)
+            
         if fecha_desde:
             queryset = queryset.filter(creado_en__date__gte=fecha_desde)
         if fecha_hasta:
             queryset = queryset.filter(creado_en__date__lte=fecha_hasta)
         
-        return queryset
+        return queryset.order_by('-creado_en') # Ordenamos por más reciente
     
     def perform_create(self, serializer):
-        # Asignar automáticamente el vendedor actual
-        serializer.save(vendedor=self.request.user)
+        usuario = self.request.user
+        
+        # 🔒 ASIGNACIÓN AUTOMÁTICA DE SUCURSAL
+        # Esto es vital: La venta se guarda en la sucursal del vendedor, 
+        # sin importar lo que diga el frontend.
+        
+        if usuario.rol == 'vendedor' and usuario.sucursal:
+            # Vendedor: Forzamos su sucursal asignada
+            serializer.save(vendedor=usuario, sucursal=usuario.sucursal)
+            
+        elif usuario.rol in ['admin_cliente', 'gerente']:
+            # Admin/Gerente: Pueden vender, pero debemos verificar la sucursal
+            sucursal_id = self.request.data.get('sucursal')
+            
+            if sucursal_id:
+                # Si mandan ID, usamos esa sucursal (verificando que sea de su compañia)
+                serializer.save(vendedor=usuario) # El serializer valida la pertenencia de la sucursal
+            else:
+                # Si no mandan ID y tienen sucursal asignada en perfil, usamos esa
+                if usuario.sucursal:
+                    serializer.save(vendedor=usuario, sucursal=usuario.sucursal)
+                else:
+                    # Si no hay sucursal por ningún lado, el serializer lanzará error de validación
+                    serializer.save(vendedor=usuario)
+        else:
+            # Fallback
+            serializer.save(vendedor=usuario)
 
 class OrdenViewSet(viewsets.ModelViewSet):
     queryset = Orden.objects.all()

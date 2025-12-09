@@ -3,200 +3,209 @@
 {% block title %}Crear Usuario - TemucoSoft{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-8">
-        
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h6 class="text-uppercase text-muted small fw-bold ls-1">Administración</h6>
-                <h2 class="fw-bold text-dark"><i class="bi bi-person-plus-fill me-2"></i>Registrar Usuario</h2>
-            </div>
-            <a href="/usuarios/" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-x-lg me-1"></i> Cancelar
-            </a>
-        </div>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-dark">Nuevo Usuario</h2>
+        <a href="/usuarios/" class="btn btn-outline-secondary rounded-pill">
+            <i class="bi bi-arrow-left me-2"></i>Volver
+        </a>
+    </div>
 
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-4">
-                <div class="alert alert-light border mb-4 d-flex align-items-center">
-                    <i class="bi bi-shield-check text-success fs-4 me-3"></i>
-                    <div>
-                        <strong>Acceso Inmediato</strong><br>
-                        Los usuarios creados podrán ingresar al sistema inmediatamente según los permisos de su rol.
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            <form id="crearUsuarioForm">
+                <div class="row g-3">
+                    <div class="col-12"><h6 class="text-muted border-bottom pb-2">Datos de Cuenta</h6></div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-secondary">Nombre de Usuario <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="username" required placeholder="Ej: j.perez">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-secondary">Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" name="email" required placeholder="juan@empresa.com">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-secondary">Contraseña <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" name="password" required placeholder="••••••••">
+                    </div>
+                    
+                    <div class="col-12 mt-4"><h6 class="text-muted border-bottom pb-2">Información Personal</h6></div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-secondary">RUT <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="rut" required placeholder="12.345.678-9">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-secondary">Teléfono</label>
+                        <input type="tel" class="form-control" name="telefono" placeholder="+56 9 ...">
+                    </div>
+
+                    <div class="col-12 mt-4"><h6 class="text-muted border-bottom pb-2">Asignación</h6></div>
+
+                    <div class="col-md-12 mb-3" id="container-compania" style="display: none;">
+                        <label class="form-label fw-bold small text-primary">Compañía (Solo Super Admin) <span class="text-danger">*</span></label>
+                        <select class="form-select border-primary" name="compania" id="select-compania">
+                            <option value="">Seleccione una compañía...</option>
+                            </select>
+                        <div class="form-text">Asigna este usuario a una empresa cliente.</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-secondary">Rol <span class="text-danger">*</span></label>
+                        <select class="form-select" name="rol" id="select-rol" required onchange="toggleSucursal()">
+                            <option value="vendedor">Vendedor</option>
+                            <option value="gerente">Gerente</option>
+                            <option value="admin_cliente">Administrador Cliente</option>
+                            <option value="super_admin" class="opcion-super">Super Admin</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6" id="container-sucursal">
+                        <label class="form-label fw-bold small text-secondary">Sucursal Asignada <span class="text-danger">*</span></label>
+                        <select class="form-select" name="sucursal" id="select-sucursal">
+                            <option value="">Seleccione una sucursal...</option>
+                        </select>
                     </div>
                 </div>
 
-                <form id="form-create-user" autocomplete="off">
-                    
-                    <h6 class="text-uppercase text-muted small fw-bold mb-3 border-bottom pb-2">Credenciales de Acceso</h6>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label for="username" class="form-label fw-bold">Nombre de Usuario (Login)</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
-                                <input type="text" class="form-control" id="username" required placeholder="Ej: jperez" autocomplete="off">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="email" class="form-label fw-bold">Correo Electrónico</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
-                                <input type="email" class="form-control" id="email" required placeholder="empleado@empresa.com" autocomplete="off">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label for="password" class="form-label fw-bold">Contraseña</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light"><i class="bi bi-key"></i></span>
-                                <input type="password" class="form-control" id="password" required autocomplete="new-password">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="confirm_password" class="form-label fw-bold">Confirmar Contraseña</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light"><i class="bi bi-check-circle"></i></span>
-                                <input type="password" class="form-control" id="confirm_password" required>
-                            </div>
-                            <div class="form-text text-danger d-none" id="pass-error">Las contraseñas no coinciden.</div>
-                        </div>
-                    </div>
-
-                    <h6 class="text-uppercase text-muted small fw-bold mb-3 border-bottom pb-2">Información Personal y Rol</h6>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                            <label for="rut" class="form-label fw-bold">RUT</label>
-                            <input type="text" class="form-control" id="rut" required placeholder="12.345.678-9" oninput="formatearRut(this)">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="rol" class="form-label fw-bold">Rol / Perfil</label>
-                            <select class="form-select" id="rol" required>
-                                <option value="" selected disabled>Seleccione...</option>
-                                <option value="vendedor">Vendedor (POS)</option>
-                                <option value="gerente">Gerente (Inventario)</option>
-                                <option value="admin_cliente" id="opt-admin" style="display:none;">Admin Cliente</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="telefono" class="form-label fw-bold">Teléfono</label>
-                            <input type="tel" class="form-control" id="telefono" placeholder="+56 9...">
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-end pt-3 border-top">
-                        <button type="submit" class="btn btn-primary px-5 shadow-sm btn-lg">
-                            <i class="bi bi-person-plus me-2"></i> Crear Usuario
-                        </button>
-                    </div>
-                </form>
-            </div>
+                <div class="mt-5 d-flex gap-2 justify-content-end">
+                    <button type="button" class="btn btn-light text-secondary" onclick="window.location.href='/usuarios/'">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-bold">
+                        <i class="bi bi-person-plus-fill me-2"></i>Crear Usuario
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
-
-<style>
-    .ls-1 { letter-spacing: 1px; }
-</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
-        
-        if (userInfo.rol === 'vendedor') {
-            alert('⛔ No tiene permisos para acceder a esta sección.');
-            window.location.href = '/';
-            return;
+    // 1. Helpers
+    function getCSRFToken() {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, 10) === ('csrftoken=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(10));
+                    break;
+                }
+            }
         }
-
-        if (userInfo.rol === 'super_admin') {
-            document.getElementById('opt-admin').style.display = 'block';
-        }
-    });
-
-    // Improved RUT Formatter
-    function formatearRut(input) {
-        let rut = input.value.replace(/[^0-9kK]/g, '');
-        
-        if (rut.length <= 1) {
-            input.value = rut;
-            return;
-        }
-
-        let cuerpo = rut.slice(0, -1);
-        let dv = rut.slice(-1).toUpperCase();
-
-        input.value = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + dv;
+        return cookieValue;
     }
 
-    document.getElementById('form-create-user').addEventListener('submit', async function(e) {
-        e.preventDefault();
+    function getFetchConfig(method = 'GET', bodyData = null) {
+        const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+        const token = localStorage.getItem('access_token');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        else { const csrf = getCSRFToken(); if (csrf) headers['X-CSRFToken'] = csrf; }
         
-        const pass = document.getElementById('password').value;
-        const confirm = document.getElementById('confirm_password').value;
-        const errorText = document.getElementById('pass-error');
-        
-        if (pass !== confirm) {
-            errorText.classList.remove('d-none');
-            document.getElementById('confirm_password').classList.add('is-invalid');
-            return;
+        const config = { method, headers, credentials: 'include' };
+        if (bodyData) config.body = JSON.stringify(bodyData);
+        return config;
+    }
+
+    // 2. Variables Globales
+    let esSuperAdmin = false;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Verificar quién soy
+        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        esSuperAdmin = userInfo.rol === 'super_admin';
+
+        // Lógica Super Admin
+        if (esSuperAdmin) {
+            document.getElementById('container-compania').style.display = 'block';
+            await cargarCompanias();
         } else {
-            errorText.classList.add('d-none');
-            document.getElementById('confirm_password').classList.remove('is-invalid');
+            // Ocultar opción de crear otro super admin si no eres uno
+            document.querySelectorAll('.opcion-super').forEach(el => el.remove());
         }
 
-        // TOKEN SEGURO (Local)
-        const token = localStorage.getItem('access_token');
-        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        await cargarSucursales();
+        toggleSucursal(); 
+    });
 
-        const payload = {
-            username: document.getElementById('username').value,
-            email: document.getElementById('email').value,
-            password: pass,
-            rut: document.getElementById('rut').value,
-            rol: document.getElementById('rol').value,
-            telefono: document.getElementById('telefono').value,
-            is_active: true,
-            compania: userInfo.compania_id 
-        };
+    async function cargarCompanias() {
+        try {
+            const res = await fetch('/api/companias/', getFetchConfig());
+            if (res.ok) {
+                const data = await res.json();
+                const lista = data.results || data;
+                const select = document.getElementById('select-compania');
+                lista.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.nombre;
+                    select.appendChild(opt);
+                });
+            }
+        } catch(e) { console.error(e); }
+    }
 
-        // Visual Feedback
-        const btn = document.querySelector('button[type="submit"]');
+    async function cargarSucursales() {
+        try {
+            const res = await fetch('/api/sucursales/', getFetchConfig());
+            if (res.ok) {
+                const data = await res.json();
+                const sucursales = data.results || data;
+                const select = document.getElementById('select-sucursal');
+                sucursales.forEach(suc => {
+                    const option = document.createElement('option');
+                    option.value = suc.id;
+                    option.textContent = suc.nombre;
+                    select.appendChild(option);
+                });
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    window.toggleSucursal = function() {
+        const rol = document.getElementById('select-rol').value;
+        const select = document.getElementById('select-sucursal');
+        
+        // Si es Admin Cliente o Super Admin, sucursal es opcional
+        if (rol === 'admin_cliente' || rol === 'super_admin') {
+            select.required = false; 
+        } else {
+            select.required = true;
+        }
+    }
+
+    document.getElementById('crearUsuarioForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = this.querySelector('button[type="submit"]');
         const originalText = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Creando...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
+
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+
+        // Limpieza de campos vacíos
+        if (!data.sucursal) delete data.sucursal;
+        if (!data.compania) delete data.compania; // Borrar si viene vacío
 
         try {
-            const response = await fetch('/api/usuarios/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                alert('✅ Usuario creado exitosamente');
+            const res = await fetch('/api/usuarios/', getFetchConfig('POST', data));
+            if (res.ok) {
+                alert('¡Usuario creado exitosamente!');
                 window.location.href = '/usuarios/';
             } else {
-                const data = await response.json();
-                let errorMsg = 'Error al crear usuario:\n';
-                if (data.username) errorMsg += '- El nombre de usuario ya existe.\n';
-                if (data.rut) errorMsg += '- El RUT ya está registrado o es inválido.\n';
-                if (data.detail) errorMsg += `- ${data.detail}\n`;
-                if (!data.username && !data.rut && !data.detail) errorMsg += JSON.stringify(data);
-                
-                alert(errorMsg);
+                const errorData = await res.json();
+                let msg = JSON.stringify(errorData);
+                if(errorData.detail) msg = errorData.detail;
+                alert('Error: ' + msg);
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
         } catch (error) {
-            console.error('Error:', error);
-            alert('Error de conexión.');
+            alert('Error de conexión');
             btn.disabled = false;
             btn.innerHTML = originalText;
         }

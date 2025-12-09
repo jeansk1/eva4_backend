@@ -110,14 +110,10 @@
         e.preventDefault();
         
         const token = localStorage.getItem('access_token');
-        const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        // NOTA: Eliminamos la validación del localStorage aquí. 
+        // Confiamos en que el Backend tiene la sesión correcta.
 
-        if (!userInfo.compania_id && userInfo.rol !== 'super_admin') {
-            alert('Error: No se ha identificado la compañía del usuario.');
-            return;
-        }
-
-        // --- USO CORRECTO DE FORMDATA (Obligatorio para subir archivos) ---
+        // --- USO CORRECTO DE FORMDATA ---
         const formData = new FormData();
         formData.append('sku', document.getElementById('sku').value);
         formData.append('nombre', document.getElementById('nombre').value);
@@ -125,8 +121,10 @@
         formData.append('categoria', document.getElementById('categoria').value);
         formData.append('precio', document.getElementById('precio').value);
         formData.append('costo', document.getElementById('costo').value);
-        formData.append('compania', userInfo.compania_id);
-
+        
+        // 🔥 CORRECCIÓN CLAVE: NO enviamos la compañía manual. 
+        // El backend la inyecta automáticamente desde el usuario logueado.
+        
         // Agregar imagen SOLO si existe
         const fileInput = document.getElementById('imagen');
         if (fileInput.files.length > 0) {
@@ -143,11 +141,11 @@
             const response = await fetch('/api/productos/', {
                 method: 'POST',
                 headers: {
-                    // IMPORTANTE: NO poner 'Content-Type': 'application/json' aquí.
-                    // Al usar FormData, el navegador pone el Content-Type correcto automáticamente.
+                    // Authorization Bearer es lo único necesario.
+                    // Content-Type lo pone automático el navegador al detectar FormData
                     'Authorization': `Bearer ${token}`
                 },
-                body: formData // Enviamos el objeto FormData, NO un JSON.stringify
+                body: formData 
             });
 
             if (response.ok) {
@@ -157,9 +155,14 @@
             } else {
                 const data = await response.json();
                 let errorMsg = 'Error al crear producto:\n';
-                if (data.sku) errorMsg += '- El SKU ya existe o es inválido.\n';
-                if (data.detail) errorMsg += `- ${data.detail}\n`;
-                if (!data.sku && !data.detail) errorMsg += JSON.stringify(data);
+                
+                // Capturar errores específicos del backend
+                if (data.sku) errorMsg += `- El SKU ya existe o es inválido.\n`;
+                if (data.error) errorMsg += `- ${data.error}\n`; // Mensaje personalizado del backend
+                if (data.detail) errorMsg += `- ${data.detail}\n`; // Mensaje genérico de DRF
+                
+                // Si no es ninguno de los anteriores, mostrar todo para depurar
+                if (!data.sku && !data.detail && !data.error) errorMsg += JSON.stringify(data);
                 
                 alert(errorMsg);
                 btn.disabled = false;
@@ -167,7 +170,7 @@
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Error de conexión con el servidor.');
+            alert('Error de conexión con el servidor. Revisa tu consola.');
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
